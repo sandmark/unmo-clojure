@@ -8,4 +8,5 @@
   :plugins [[lein-environ "1.1.0"]]
   :main ^:skip-aot unmo.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:dev {:dependencies [[alembic "0.3.2"]]}
+             :uberjar {:aot :all}})
