@@ -5,6 +5,6 @@
 (defmethod response :what [{:keys [input]}]
   (str input "ってなに？"))
 
-(defmethod response :default [params]
+(defmethod response :default [{:keys [responder]}]
   (throw (IllegalArgumentException.
-          (str "Responder " (params :responder) " が存在しません。"))))
+          (str "Responder " responder " が存在しません。"))))
