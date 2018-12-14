@@ -2,8 +2,8 @@
 
 (defmulti response :responder)
 
-(defmethod response :what [params]
-  (str (:input params) "ってなに？"))
+(defmethod response :what [{:keys [input] params}]
+  (str input "ってなに？"))
 
 (defmethod response :default [params]
   (throw (IllegalArgumentException.
