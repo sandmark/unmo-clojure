@@ -2,7 +2,7 @@
 
 (defmulti response :responder)
 
-(defmethod response :what [{:keys [input] params}]
+(defmethod response :what [{:keys [input]}]
   (str input "ってなに？"))
 
 (defmethod response :default [params]
