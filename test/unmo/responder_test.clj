@@ -6,9 +6,10 @@
   (testing "WhatResponderは"
     (testing "発言を表現するMapオブジェクトを返す"
       (let [res (response {:responder :what :input "test"})]
-        (is (contains? res :responder))
-        (is (contains? res :input ))
-        (is (contains? res :response))))
+        (are [k] (contains? res k)
+          :responder
+          :input
+          :response)))
 
     (testing "入力 s に対し、常に \"sってなに？\" と返す"
       (let [result {:responder :what :input "テスト" :response "テストってなに？"}]
