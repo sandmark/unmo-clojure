@@ -1,7 +1,7 @@
 (ns unmo.core
   (:gen-class)
   (:require [unmo.responder :refer [response]]
-            [unmo.dictionary :refer [study]]
+            [unmo.dictionary :refer [study save-dictionary load-dictionary]]
             [environ.core :refer [env]]
             [bigml.sampling [simple :as simple]]))
 
@@ -34,9 +34,12 @@
   (print "> ")
   (flush)
 
-  (loop [input (read-line) dictionary {}]
+  (loop [input (read-line)
+         dictionary (load-dictionary dictionary-file)]
     (if (clojure.string/blank? input)
-      (println "Quit.")
+      (do (println "Saving dictionary...")
+          (save-dictionary dictionary dictionary-file)
+          (println "Quit."))
       (let [res (-> {:input input :responder (rand-responder) :dictionary dictionary}
                     (response)
                     (format-response))]
