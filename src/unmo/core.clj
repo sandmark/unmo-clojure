@@ -1,6 +1,7 @@
 (ns unmo.core
   (:gen-class)
   (:require [unmo.responder :refer [response]]
+            [unmo.dictionary :refer [study]]
             [environ.core :refer [env]]
             [bigml.sampling [simple :as simple]]))
 
@@ -12,7 +13,6 @@
   (-> [:what :random]
       (simple/sample :weigh {:what 0.1 :random 0.9})
       (first)))
-
 
 (defn- format-response
   "Responder からの結果を整形して返す。"
@@ -29,10 +29,13 @@
   (print "> ")
   (flush)
 
-  (loop [input (read-line)]
+  (loop [input (read-line) dictionary {}]
     (if (clojure.string/blank? input)
       (println "Quit.")
-      (do (-> {:responder :what :input input} (response) (format-response) (println))
-          (print "> ")
-          (flush)
-          (recur (read-line))))))
+      (let [res (-> {:input input :responder (rand-responder) :dictionary dictionary}
+                    (response)
+                    (format-response))]
+        (println res)
+        (print "> ")
+        (flush)
+        (recur (read-line) (study dictionary input))))))
