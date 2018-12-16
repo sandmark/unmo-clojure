@@ -5,6 +5,14 @@
   :responder)
 
 (defmethod
+  ^{:doc "RandomResponderは入力に関係なく、:dictionary -> :random に定義されたVectorからランダムな値を返す。"}
+  response :random [{:keys [dictionary] :as params}]
+  (let [random (:random dictionary)]
+    (if (empty? random)
+      (assoc params :error {:message "ランダム辞書が空です。"})
+      (assoc params :response (rand-nth random)))))
+
+(defmethod
   ^{:doc "WhatResponderは入力 :input に対し、常に 'inputってなに？' と返す。"}
   response :what [{:keys [input] :as params}]
   (->> (str input "ってなに？")

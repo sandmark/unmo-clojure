@@ -2,6 +2,21 @@
   (:require [clojure.test :refer :all]
             [unmo.responder :refer :all]))
 
+(deftest random-responder-test
+  (testing "RandomResponderは"
+    (testing "ランダム辞書から無作為な値を返す"
+      (let [dic {:random ["a" "b" "c"]}
+            param {:responder :random :dictionary dic}
+            res (response param)]
+        (is (some #{(:response res)} (:random dic)))))
+
+    (testing "ランダム辞書が空だった場合、:errorキーを設定して返す"
+      (let [dic {:random []}
+            param {:responder :random}
+            res (response param)]
+        (is (contains? res :error))
+        (is (clojure.string/includes? (get-in res [:error :message]) "ランダム辞書が空です" ))))))
+
 (deftest what-responder-test
   (testing "WhatResponderは"
     (testing "発言を表現するMapオブジェクトを返す"
