@@ -1,7 +1,18 @@
 (ns unmo.core
   (:gen-class)
   (:require [unmo.responder :refer [response]]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [bigml.sampling [simple :as simple]]))
+
+(defn rand-responder
+  "確率によって変動するResponderを返す。
+  :what   10%
+  :random 90%"
+  []
+  (-> [:what :random]
+      (simple/sample :weigh {:what 0.1 :random 0.9})
+      (first)))
+
 
 (defn- format-response
   "Responder からの結果を整形して返す。"
