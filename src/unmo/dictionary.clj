@@ -1,5 +1,5 @@
 (ns unmo.dictionary
-  (:require [unmo.util :refer [conj-unique]]
+  (:require [unmo.util :refer [conj-unique file-exists?]]
             [fipp.edn :refer [pprint] :rename {pprint fipp}]))
 
 (defn- study-random
