@@ -4,7 +4,7 @@
             [environ.core :refer [env]]
             [bigml.sampling [simple :as simple]]))
 
-(defn rand-responder
+(defn- rand-responder
   "確率によって変動するResponderを返す。
   :what   10%
   :random 90%"
