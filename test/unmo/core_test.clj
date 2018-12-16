@@ -13,4 +13,12 @@
         (is (= "What> テストってなに？"
                (-> {:responder :what :input "テスト"}
                    (unmo.responder/response)
-                   (format-response))))))))
+                   (format-response)))))
+
+      (testing "エラーが発生した場合"
+        (testing ":responseの値を警告にして返す"
+          (let [param   {:responder :random :dictionary {}}
+                res     (unmo.responder/response param)
+                message (get-in res [:error :message])]
+            (is (= (str "Random> 警告: " message)
+                   (format-response res)))))))))

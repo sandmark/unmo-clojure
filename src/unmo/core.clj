@@ -16,9 +16,11 @@
 
 (defn- format-response
   "Responder からの結果を整形して返す。"
-  [{:keys [responder response]}]
+  [{:keys [responder response error]}]
   (let [responder-name (-> responder (name) (clojure.string/capitalize))]
-    (str responder-name "> " response)))
+    (if error
+      (str responder-name "> 警告: " (:message error))
+      (str responder-name "> " response))))
 
 (defn -main
   "標準入力からユーザーの発言を受け取り、Responder の結果を表示して繰り返す。"
