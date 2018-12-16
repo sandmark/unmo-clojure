@@ -5,6 +5,11 @@
             [environ.core :refer [env]]
             [bigml.sampling [simple :as simple]]))
 
+(def ^{:private true
+       :doc "デフォルトで使用される辞書ファイル名"}
+  dictionary-file
+  "dict.clj")
+
 (defn- rand-responder
   "確率によって変動するResponderを返す。
   :what   10%
