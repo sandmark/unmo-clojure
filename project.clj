@@ -3,7 +3,7 @@
   :url "https://github.com/sandmark/unmo-clojure/"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.10.0-RC5"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [environ "1.1.0"]
                  [bigml/sampling "3.2"]
                  [fipp "0.6.14"]]
