@@ -2,6 +2,36 @@
   (:require [clojure.test :refer :all]
             [unmo.responder :refer :all]))
 
+(deftest pattern-responder-test
+  (testing "PatternResponderは"
+    (testing "マッチするパターンを見つけ、"
+      (let [dictionary {:pattern {"チョコ(レート)?" ["%match%おいしいよね！"]
+                                  "天気"          ["明日晴れるといいなー"]}}
+            base-param {:responder :pattern :dictionary dictionary}]
+        (testing "候補の中からランダムなものを返す"
+          (let [param (assoc base-param :input "今日は天気がいい")
+                res   (response param)
+                text  (:response res)]
+            (is (= "明日晴れるといいなー" text))))
+
+        (testing "%match%を正規表現でマッチしたパターンに置き換えて返す"
+          (is (= "チョコおいしいよね！"
+                 (-> base-param (assoc :input "チョコ食べたい") (response) (:response))))
+          (is (= "チョコレートおいしいよね！"
+                 (-> base-param (assoc :input "チョコレート食べたい") (response) (:response)))))))
+
+    (testing "マッチするパターンがなかった場合"
+      (let [param {:input "nothing" :dictionary {} :responder :pattern}]
+        (testing ":errorを設定して返す"
+          (is (contains? (response param) :error)))
+
+        (testing ":error :messageに詳細メッセージを設定する"
+          (is (clojure.string/includes? "パターンがありません"
+                                        (get-in (response param) [:error :message]))))
+
+        (testing ":error :typeに:no-matchを設定する"
+          (is (= :no-match (get-in (response param) [:error :type]))))))))
+
 (deftest random-responder-test
   (testing "RandomResponderは"
     (testing "ランダム辞書から無作為な値を返す"
