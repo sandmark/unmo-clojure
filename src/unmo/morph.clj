@@ -1,0 +1,24 @@
+(ns unmo.morph)
+
+(import [com.worksap.nlp.sudachi DictionaryFactory Tokenizer$SplitMode])
+
+(def ^:private tokenizer
+  "Sudachiの形態素解析インスタンス"
+  (let [settings (slurp "sudachi_fulldict.json" :encoding "UTF-8")]
+    (-> (DictionaryFactory.) (.create settings) (.create))))
+
+(def ^:private split-mode
+  "Sudachiの形態素解析オプション"
+  {:a Tokenizer$SplitMode/A :b Tokenizer$SplitMode/B :c Tokenizer$SplitMode/C})
+
+(defn analyze
+  "与えられた文字列に対して形態素解析を行い、[形態素 表層系]のリストを返す"
+  ([text] (analyze text :c))
+  ([text mode]
+   (letfn [(->parts [token]
+             (let [parts   (->> (.partOfSpeech token) (clojure.string/join \,))
+                   surface (.surface token)]
+               [surface parts]))]
+     (->> (.tokenize tokenizer (mode split-mode) text)
+          (map ->parts)
+          (filter (comp (complement empty?) first))))))
