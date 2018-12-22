@@ -1,4 +1,4 @@
-(ns unmo.morph-test
+(ns ^:eftest/synchronized unmo.morph-test
   (:require [clojure.test :refer :all]
             [unmo.morph :refer :all]))
 
