@@ -2,6 +2,20 @@
   (:require [clojure.test :refer :all]
             [unmo.morph :refer :all]))
 
+(deftest noun?-test
+  (testing "noun?は"
+    (testing "形態素を表すベクタ [word part] を受け取り、品詞が名詞であれば真を返す"
+      (let [text "あたしはプログラムの女の子です。"
+            parts (analyze text)]
+        (are [bool morph] (= bool (noun? morph))
+          false (nth parts 0)
+          false (nth parts 1)
+          true  (nth parts 2)
+          false (nth parts 3)
+          true  (nth parts 4)
+          false (nth parts 5)
+          false (nth parts 6))))))
+
 (deftest analyze-test
   (testing "analyzeは"
     (let [text "私は医療品安全管理責任者です"]

@@ -22,3 +22,8 @@
      (->> (.tokenize tokenizer (mode split-mode) text)
           (map ->parts)
           (filter (comp (complement empty?) first))))))
+
+(defn noun?
+  "与えられた形態素が名詞かどうかを判定する"
+  [[word part]]
+  (-> #"名詞,(一般|普通名詞|固有名詞|サ変接続|形容動詞語幹)" (re-find part) (boolean)))
