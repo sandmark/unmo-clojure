@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [unmo.responder :refer [response]]
             [unmo.dictionary :refer [study save-dictionary load-dictionary]]
+            [unmo.morph :refer [analyze]]
             [environ.core :refer [env]]
             [bigml.sampling [simple :as simple]]))
 
@@ -47,4 +48,4 @@
         (println res)
         (print "> ")
         (flush)
-        (recur (read-line) (study dictionary input))))))
+        (recur (read-line) (study dictionary input (analyze input)))))))
