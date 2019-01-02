@@ -12,11 +12,12 @@
 
 (defn- rand-responder
   "確率によって変動するResponderを返す。
-  :what   10%
-  :random 90%"
+  :what    10%
+  :random  30%
+  :pattern 60%"
   []
-  (-> [:what :random]
-      (simple/sample :weigh {:what 0.1 :random 0.9})
+  (-> [:what :random :pattern]
+      (simple/sample :weigh {:what 0.1 :random 0.3 :pattern 0.6})
       (first)))
 
 (defn- format-response
