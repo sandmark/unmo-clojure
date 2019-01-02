@@ -20,9 +20,11 @@
   (update dictionary :random conj-unique input))
 
 (defn study
-  "文字列inputを辞書dictionaryに保存したものを返す。"
-  [dictionary input]
-  (study-random dictionary input))
+  "文字列inputと形態素解析結果partsを受け取り、辞書dictionaryに保存したものを返す。"
+  [dictionary input parts]
+  (-> dictionary
+      (study-random input)
+      (study-pattern input parts)))
 
 (defn save-dictionary
   "辞書dictionaryをpprintし、指定されたファイルに保存する。"

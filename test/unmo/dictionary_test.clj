@@ -3,6 +3,22 @@
             [unmo.dictionary :refer :all]
             [unmo.morph :refer :all]))
 
+(deftest study-test
+  (let [study-random  #'unmo.dictionary/study-random
+        study-pattern #'unmo.dictionary/study-pattern
+        text  "あたしはプログラムの女の子です"
+        parts (analyze text)]
+    (testing "studyは"
+      (testing "study-randomを呼び出す"
+        (let [dictionary (study-random {} text)]
+          (is (= (:random dictionary)
+                 (:random (study {} text parts))))))
+
+      (testing "study-patternを呼び出す"
+        (let [dictionary (study-pattern {} text parts)]
+          (is (= (:pattern dictionary)
+                 (:pattern (study {} text parts)))))))))
+
 (deftest study-pattern-test
   (let [study-pattern #'unmo.dictionary/study-pattern]
     (testing "study-patternは発言inputと辞書dictionaryと形態素解析結果partsを受け取り"
