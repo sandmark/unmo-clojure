@@ -3,6 +3,19 @@
             [unmo.morph :refer [noun?]]
             [fipp.edn :refer [pprint] :rename {pprint fipp}]))
 
+(defn- study-template
+  "形態素解析結果に基づき、名詞の数をキー、名詞を%noun%に置き換えた発言のリストを値として学習する。
+  重複は学習しない。
+  学習した結果をdictionaryの:templateに定義して返す。"
+  [dictionary parts]
+  (letfn [(->noun [[word _ :as part]]
+            (if (noun? part)
+              "%noun%"
+              word))]
+    (let [nouns-count (->> parts (filter noun?) (count))
+          template    (->> parts (map ->noun)   (apply str))]
+      (update-in dictionary [:template nouns-count] conj-unique template))))
+
 (defn- study-pattern
   "形態素解析結果に基づき、名詞をキー、発言のベクタを値として学習する。重複は学習しない。
    学習した結果をdictionaryの:patternに定義して返す。"
