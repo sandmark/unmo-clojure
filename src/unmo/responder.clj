@@ -1,8 +1,23 @@
-(ns unmo.responder)
+(ns unmo.responder
+  (:require [unmo.morph :refer [noun?]]))
 
 (defmulti response
   "渡された発言オブジェクトに対する返答を :response キーに設定して返す。どの思考エンジンが使用されるかは :responder キーの値で変わる。"
   :responder)
+
+(defmethod
+  ^{:doc "TemplateResponderは入力inputの名詞を調べ、辞書のテンプレートの%noun%をその名詞で置き換えて返す。"}
+  response :template [{:keys [parts dictionary] :as params}]
+  (let [nouns (->> parts (filter noun?) (map first))
+        nouns-count (count nouns)
+        ->response #(clojure.string/replace-first %1 #"%noun%" %2)]
+    (if-let [templates (get-in dictionary [:template nouns-count])]
+      (->> nouns
+           (reduce ->response (rand-nth templates))
+           (assoc params :response))
+      (-> params
+          (assoc :error {:type :no-match
+                         :message "一致するテンプレートがありません。"})))))
 
 (defmethod
   ^{:doc "PatternResponderは入力inputに正規表現でマッチするパターンを探し、そのうちランダムなものを返す。"}

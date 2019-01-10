@@ -1,6 +1,53 @@
 (ns unmo.responder-test
   (:require [clojure.test :refer :all]
-            [unmo.responder :refer :all]))
+            [unmo.responder :refer :all]
+            [unmo.morph :refer [analyze]]))
+
+(deftest template-responder-test
+  (testing "TemplateResponderは"
+    (let [dictionary {:template {1 ["あたしは%noun%です" "あなたは%noun%です"]
+                                 2 ["%noun%の%noun%は？"]}}]
+      (testing "発言の名詞の数に一致するテンプレートがある場合"
+        (let [parts (analyze "晴れた天気だ")
+              param {:responder :template :parts parts :dictionary dictionary}]
+          (testing "テンプレートのいずれかをランダムで選択し、%noun%を発言の名詞に置き換える"
+            (let [result (:response (response param))]
+              (is (or (= "あたしは天気です" result)
+                      (= "あなたは天気です" result)))))
+
+          (testing "テンプレートの複数の%noun%を発言の名詞にランダムで置き換える"
+            (let [parts (analyze "今日は天気がいいな")
+                  param (assoc param :parts parts)
+                  result (:response (response param))]
+              (is (or (= "天気の今日は？" result)
+                      (= "今日の天気は？" result)))))))
+
+      (testing "発言の名詞の数に一致するテンプレートが無い場合"
+        (let [parts (analyze "あたしはプログラムの女の子で、好きな食べ物は月餅です")
+              param {:responder :template :parts parts :dictionary dictionary}]
+          (testing ":errorを設定して返す"
+            (is (contains? (response param) :error)))
+
+          (testing ":error :messageに詳細メッセージを設定する"
+            (is (clojure.string/includes? (get-in (response param) [:error :message])
+                                          "テンプレートがありません")))
+
+          (testing ":error :typeに:no-matchを設定する"
+            (is (= :no-match (get-in (response param) [:error :type]))))))
+
+      (testing "入力に名詞が見つからなかった場合"
+        (let [parts (analyze "こんにちは")
+              param {:responder :template :parts parts :dictionary dictionary}
+              res   (response param)]
+          (testing ":errorを設定して返す"
+            (is (contains? res :error)))
+
+          (testing ":error :messageに詳細メッセージを設定する"
+            (is (clojure.string/includes? (get-in res [:error :message])
+                                          "テンプレートがありません")))
+
+          (testing ":error :typeに:no-matchを設定する"
+            (is (= :no-match (get-in res [:error :type])))))))))
 
 (deftest pattern-responder-test
   (testing "PatternResponderは"
