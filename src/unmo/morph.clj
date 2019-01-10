@@ -1,6 +1,5 @@
-(ns unmo.morph)
-
-(import [com.worksap.nlp.sudachi DictionaryFactory Tokenizer$SplitMode])
+(ns unmo.morph
+  (:import [com.worksap.nlp.sudachi DictionaryFactory Tokenizer$SplitMode]))
 
 (def ^:private tokenizer
   "Sudachiの形態素解析インスタンス"
