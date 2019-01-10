@@ -48,7 +48,13 @@
         (testing "重複は学習しない"
           (let [result (study-template dictionary parts)
                 doubled (study-template result parts)]
-            (is (= result doubled))))))))
+            (is (= result doubled))))
+
+        (testing "名詞の無い発言は学習しない"
+          (let [parts (unmo.morph/analyze "学んではいけません")
+                result-dictionary (study-template dictionary parts)]
+            (is (= dictionary result-dictionary))
+            (is (not (contains? (:template result-dictionary) 0)))))))))
 
 (deftest study-pattern-test
   (let [study-pattern #'unmo.dictionary/study-pattern]
