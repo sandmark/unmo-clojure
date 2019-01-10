@@ -4,8 +4,9 @@
             [unmo.morph :refer :all]))
 
 (deftest study-test
-  (let [study-random  #'unmo.dictionary/study-random
-        study-pattern #'unmo.dictionary/study-pattern
+  (let [study-random   #'unmo.dictionary/study-random
+        study-pattern  #'unmo.dictionary/study-pattern
+        study-template #'unmo.dictionary/study-template
         text  "あたしはプログラムの女の子です"
         parts (analyze text)]
     (testing "studyは"
@@ -17,7 +18,43 @@
       (testing "study-patternを呼び出す"
         (let [dictionary (study-pattern {} text parts)]
           (is (= (:pattern dictionary)
-                 (:pattern (study {} text parts)))))))))
+                 (:pattern (study {} text parts))))))
+
+      (testing "study-templateを呼び出す"
+        (let [dictionary (study-template {} parts)]
+          (is (= (:template dictionary)
+                 (:template (study {} text parts)))))))))
+
+(deftest study-template-test
+  (let [study-template #'unmo.dictionary/study-template]
+    (testing "study-templateは"
+      (let [dictionary {}
+            input "あたしはプログラムの女の子です"
+            parts (analyze input)]
+        (testing ":templateを持つMapを返す"
+          (is (contains? (study-template dictionary parts) :template)))
+
+        (testing "名詞の数をキーにする"
+          (let [template (-> (study-template dictionary parts)
+                             (get :template))]
+            (is (contains? template 2))))
+
+        (testing "発言の名詞部分を%noun%に変換する"
+          (let [result (-> (study-template dictionary parts)
+                           (get-in [:template 2])
+                           (first))]
+            (is (= "あたしは%noun%の%noun%です" result))))
+
+        (testing "重複は学習しない"
+          (let [result (study-template dictionary parts)
+                doubled (study-template result parts)]
+            (is (= result doubled))))
+
+        (testing "名詞の無い発言は学習しない"
+          (let [parts (unmo.morph/analyze "学んではいけません")
+                result-dictionary (study-template dictionary parts)]
+            (is (= dictionary result-dictionary))
+            (is (not (contains? (:template result-dictionary) 0)))))))))
 
 (deftest study-pattern-test
   (let [study-pattern #'unmo.dictionary/study-pattern]
