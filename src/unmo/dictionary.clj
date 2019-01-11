@@ -17,6 +17,17 @@
          (update-in [prefix1 prefix2] conj-unique suffix)
          (recur prefix2 suffix rest)))))
 
+(defn- study-markov
+  "形態素解析結果から文節のつながりを記録し、学習する。
+  実装を簡単にするため、3単語以上で構成された文章のみ学習する。"
+  [dictionary parts]
+  (if (< (count parts) 3)
+    dictionary
+    (let [[start _] (first parts)]
+      (-> dictionary
+          (update-in [:markov :starts start] (fnil inc 0))
+          (update-in [:markov :dictionary] parts->markov parts)))))
+
 (defn- study-template
   "形態素解析結果に基づき、名詞の数をキー、名詞を%noun%に置き換えた発言のリストを値として学習する。
   重複、ないし名詞が無い発言は学習しない。

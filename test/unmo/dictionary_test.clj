@@ -52,6 +52,40 @@
           (let [parts (analyze "あたしが好きなのはおしゃべりと月餅です")]
             (is (= merged (parts->markov dictionary parts)))))))))
 
+(deftest study-markov-test
+  (let [study-markov #'unmo.dictionary/study-markov]
+    (testing "study-markovは"
+      (testing "3単語未満の文章は学習しない"
+        (let [result (->> "もういや"
+                          (analyze)
+                          (study-markov {}))]
+          (is (= {} result))))
+
+      (testing ":startsに「文章の開始単語」を記録する"
+        (let [result (->> "あたしはプログラムの女の子です"
+                          (analyze)
+                          (study-markov {}))]
+          (is (contains? (get result :markov) :starts))
+          (is (= 1 (get-in result [:markov :starts "あたし"])))))
+
+      (testing ":startsの「文章の開始単語」は学習のたびに加算される"
+        (let [result (-> {}
+                         (study-markov (analyze "あたしはプログラムの女の子です"))
+                         (study-markov (analyze "あたしが好きなのはおしゃべりと月餅です")))]
+          (is (= 2 (get-in result [:markov :starts "あたし"])))))
+
+      (testing ":dictionaryにマルコフ辞書を記録する"
+        (let [result (->> "あたしはプログラムの女の子です"
+                          (analyze)
+                          (study-markov {}))
+              markov (:markov result)
+              markov-dict (get-in result [:markov :dictionary])
+              prefix-count 5]
+          (is (contains? markov :dictionary))
+          (is (= prefix-count (count markov-dict)))
+          (are [prefix] (contains? markov-dict prefix)
+            "あたし" "は" "プログラム" "の" "女の子"))))))
+
 (deftest study-template-test
   (let [study-template #'unmo.dictionary/study-template]
     (testing "study-templateは"
