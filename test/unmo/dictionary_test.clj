@@ -25,6 +25,33 @@
           (is (= (:template dictionary)
                  (:template (study {} text parts)))))))))
 
+(deftest parts->markov-test
+  (let [parts->markov #'unmo.dictionary/parts->markov]
+    (testing "parts->markovは"
+      (let [dictionary {"あたし" {"は" ["プログラム"]},
+                        "は" {"プログラム" ["の"]},
+                        "プログラム" {"の" ["女の子"]},
+                        "の" {"女の子" ["です"]},
+                        "女の子" {"です" ["%ENDMARK%"]}}
+            merged     {"あたし" {"は" ["プログラム"] "が" ["好き"]}
+                        "は" {"プログラム" ["の"] "おしゃべり" ["と"]}
+                        "プログラム" {"の" ["女の子"]}
+                        "の" {"女の子" ["です"] "は" ["おしゃべり"]}
+                        "女の子" {"です" ["%ENDMARK%"]}
+                        "が" {"好き" ["な"]}
+                        "好き" {"な" ["の"]}
+                        "な" {"の" ["は"]}
+                        "おしゃべり" {"と" ["月餅"]}
+                        "と" {"月餅" ["です"]}
+                        "月餅" {"です" ["%ENDMARK%"]}}]
+        (testing "形態素解析結果をマルコフ辞書形式に変換する"
+          (let [parts (analyze "あたしはプログラムの女の子です")]
+            (is (= dictionary (parts->markov {} parts)))))
+
+        (testing "初期値を指定した場合、マージされた辞書を返す"
+          (let [parts (analyze "あたしが好きなのはおしゃべりと月餅です")]
+            (is (= merged (parts->markov dictionary parts)))))))))
+
 (deftest study-template-test
   (let [study-template #'unmo.dictionary/study-template]
     (testing "study-templateは"

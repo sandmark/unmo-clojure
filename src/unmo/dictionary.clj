@@ -3,6 +3,20 @@
             [unmo.morph :refer [noun?]]
             [fipp.edn :refer [pprint] :rename {pprint fipp}]))
 
+(defn- parts->markov
+  "形態素解析結果をマルコフ辞書形式に変換する。"
+  ([dictionary [[prefix1 _] [prefix2 _] & parts]]
+   (->> parts
+        (map first)
+        (parts->markov dictionary prefix1 prefix2)))
+
+  ([dictionary prefix1 prefix2 [suffix & rest]]
+   (if (not suffix)
+     (update-in dictionary [prefix1 prefix2] conj-unique "%ENDMARK%")
+     (-> dictionary
+         (update-in [prefix1 prefix2] conj-unique suffix)
+         (recur prefix2 suffix rest)))))
+
 (defn- study-template
   "形態素解析結果に基づき、名詞の数をキー、名詞を%noun%に置き換えた発言のリストを値として学習する。
   重複、ないし名詞が無い発言は学習しない。
