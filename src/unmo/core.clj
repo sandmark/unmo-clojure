@@ -14,15 +14,17 @@
 (defn- rand-responder
   "確率によって変動するResponderを返す。
   :what     10%
-  :random   30%
-  :pattern  40%
-  :template 20%"
+  :random   20%
+  :pattern  30%
+  :template 20%
+  :markov   20%"
   []
-  (-> [:what :random :pattern :template]
+  (-> [:what :random :pattern :template :markov]
       (simple/sample :weigh {:what     0.1
-                             :random   0.3
-                             :pattern  0.4
-                             :template 0.2})
+                             :random   0.2
+                             :pattern  0.3
+                             :template 0.2
+                             :markov   0.2})
       (first)))
 
 (defn- format-response
