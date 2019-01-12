@@ -126,12 +126,19 @@
             res (response param)]
         (is (some #{(:response res)} (:random dic)))))
 
-    (testing "ランダム辞書が空だった場合、:errorキーを設定して返す"
-      (let [dic {:random []}
-            param {:responder :random}
-            res (response param)]
-        (is (contains? res :error))
-        (is (clojure.string/includes? (get-in res [:error :message]) "ランダム辞書が空です" ))))))
+    (testing "ランダム辞書が空だった場合"
+      (testing ":error :messageを設定して返す"
+        (let [dictionary {:random []}
+              param {:responder :random :dictionary dictionary}
+              res (response param)]
+          (is (contains? res :error))
+          (is (clojure.string/includes? (get-in res [:error :message]) "ランダム辞書が空です"))))
+
+      (testing ":error :typeに:fatalを設定する"
+        (let [dictionary {:random []}
+              param {:responder :random :dictionary dictionary}
+              res (response param)]
+          (is (= :fatal (get-in res [:error :type]))))))))
 
 (deftest what-responder-test
   (testing "WhatResponderは"

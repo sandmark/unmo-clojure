@@ -61,7 +61,8 @@
   response :random [{:keys [dictionary] :as params}]
   (let [random (:random dictionary)]
     (if (empty? random)
-      (assoc params :error {:message "ランダム辞書が空です。"})
+      (assoc params :error {:message "ランダム辞書が空です。"
+                            :type :fatal})
       (assoc params :response (rand-nth random)))))
 
 (defmethod
