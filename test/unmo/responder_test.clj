@@ -3,6 +3,45 @@
             [unmo.responder :refer :all]
             [unmo.morph :refer [analyze]]))
 
+(deftest markov-responder-test
+  (testing "MarkovResponderは"
+    (let [study-markov #'unmo.dictionary/study-markov]
+      (testing "形態素解析結果partsを受け取り"
+        (let [dictionary (study-markov {} (analyze "あたしはプログラムの女の子です"))
+              parts (analyze "あたしが好きなのはおしゃべりと月餅です")
+              params {:responder :markov :parts parts :dictionary dictionary}
+              result (response params)
+              res (get result :response)]
+          (testing "単語数30個までの文章を生成する"
+            (is (>= 30 (-> res (analyze) (count)))))
+
+          (testing "文頭の単語が辞書にある場合"
+            (testing "その単語から始まる文章を返す"
+              (is (clojure.string/starts-with? res "あたし"))))
+
+          (testing "文頭の単語が辞書にない場合"
+            (let [parts (analyze "まったく関係のない文章")
+                  params {:responder :markov :parts parts :dictionary dictionary}
+                  result (response params)
+                  res (get result :response)]
+              (testing "文頭になりうるランダムな単語から文章を生成する"
+                (is (clojure.string/starts-with? res "あたし"))))))))
+
+    (testing "辞書が空の場合"
+      (let [dictionary {}
+            parts (analyze "テスト")
+            params {:responder :markov :parts parts}
+            result (response params)]
+        (testing ":errorを設定して返す"
+          (is (contains? result :error)))
+
+        (testing ":error :typeに:dictionary-emptyを設定する"
+          (is (= :dictionary-empty (get-in result [:error :type]))))
+
+        (testing ":error :messageに詳細メッセージを設定する"
+          (is (clojure.string/includes? (get-in result [:error :message])
+                                        "辞書が空")))))))
+
 (deftest template-responder-test
   (testing "TemplateResponderは"
     (let [dictionary {:template {1 ["あたしは%noun%です" "あなたは%noun%です"]
