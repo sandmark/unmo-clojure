@@ -7,6 +7,7 @@
   (let [study-random   #'unmo.dictionary/study-random
         study-pattern  #'unmo.dictionary/study-pattern
         study-template #'unmo.dictionary/study-template
+        study-markov   #'unmo.dictionary/study-markov
         text  "あたしはプログラムの女の子です"
         parts (analyze text)]
     (testing "studyは"
@@ -23,7 +24,12 @@
       (testing "study-templateを呼び出す"
         (let [dictionary (study-template {} parts)]
           (is (= (:template dictionary)
-                 (:template (study {} text parts)))))))))
+                 (:template (study {} text parts))))))
+
+      (testing "study-markovを呼び出す"
+        (let [dictionary (study-markov {} parts)]
+          (is (= (:markov dictionary)
+                 (:markov (study {} text parts)))))))))
 
 (deftest parts->markov-test
   (let [parts->markov #'unmo.dictionary/parts->markov]

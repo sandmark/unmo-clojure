@@ -65,7 +65,8 @@
   (-> dictionary
       (study-random input)
       (study-pattern input parts)
-      (study-template parts)))
+      (study-template parts)
+      (study-markov parts)))
 
 (defn save-dictionary
   "辞書dictionaryをpprintし、指定されたファイルに保存する。"
