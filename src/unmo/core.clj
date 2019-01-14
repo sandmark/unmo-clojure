@@ -35,6 +35,21 @@
       (str responder-name "> 警告: " (:message error))
       (str responder-name "> " response))))
 
+(defn- dialogue
+  "ユーザーからの発言、形態素解析結果、辞書を受け取り、AIの思考結果を整形した文字列を返す。"
+  ([input parts dictionary]
+   (dialogue input parts dictionary (rand-responder)))
+  ([input parts dictionary responder]
+   (let [res (-> {:input input
+                  :dictionary dictionary
+                  :parts parts
+                  :responder responder}
+                 (response))]
+     (case (get-in res [:error :type])
+       :fatal (format-response res)
+       nil    (format-response res)
+       (recur input parts dictionary :random)))))
+
 (defn -main
   "標準入力からユーザーの発言を受け取り、Responder の結果を表示して繰り返す。"
   [& args]
@@ -48,10 +63,9 @@
       (do (println "Saving dictionary...")
           (save-dictionary dictionary dictionary-file)
           (println "Quit."))
-      (let [res (-> {:input input :responder (rand-responder) :dictionary dictionary}
-                    (response)
-                    (format-response))]
+      (let [parts (analyze input)
+            res (dialogue input parts dictionary)]
         (println res)
         (print "> ")
         (flush)
-        (recur (read-line) (study dictionary input (analyze input)))))))
+        (recur (read-line) (study dictionary input parts))))))

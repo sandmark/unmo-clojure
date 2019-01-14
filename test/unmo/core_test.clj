@@ -1,6 +1,37 @@
 (ns unmo.core-test
   (:require [clojure.test :refer :all]
-            [unmo.core :refer :all]))
+            [clojure.string :refer [includes? starts-with?]]
+            [unmo.core :refer :all]
+            [unmo.morph :refer [analyze]]))
+
+(deftest dialogue-test
+  (testing "dialogueは"
+    (let [dialogue #'unmo.core/dialogue]
+      (testing "input parts dictionaryを受け取り"
+        (let [input "あたしはプログラムの女の子です"
+              parts (analyze input)
+              dictionary {}]
+          (testing "response文字列を返す"
+            (let [result (dialogue input parts {:random ["test"]})]
+              (is (or (= (str "What> " input "ってなに？"))
+                      (= "Random> test" result)))))
+          (testing "エラーが発生した場合"
+            (testing ":typeが:fatalであれば警告メッセージを表示する"
+              (let [result (dialogue input parts dictionary)]
+                (is (or (starts-with? result "What")
+                        (includes? result "辞書が空")))))
+            (testing ":typeが:fatalでなければRandomResponderを呼び出す"
+              (let [result (dialogue input parts {:random ["anything"]})]
+                (is (starts-with? result "Random>")))))))
+
+      (testing "input parts dictionary responderが指定された場合"
+        (let [input "あたしはプログラムの女の子です"
+              parts (analyze input)
+              dictionary {:pattern {"プログラム" ["あたしが好きなのは%noun%と%noun%です"]}}]
+          (testing "指定されたResponderを呼び出す"
+            (let [result (dialogue input parts dictionary :pattern)]
+              (is (or (= "あたしが好きなのは女の子とプログラムです")
+                      (= "あたしが好きなのはプログラムと女の子です"))))))))))
 
 (deftest format-response-test
   (testing "format-responseは"
