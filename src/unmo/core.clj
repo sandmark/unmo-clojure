@@ -3,7 +3,7 @@
   (:require [unmo.responder :refer [response]]
             [unmo.dictionary :refer [study save-dictionary load-dictionary]]
             [unmo.morph :refer [analyze]]
-            [environ.core :refer [env]]
+            [unmo.version :refer [unmo-version]]
             [bigml.sampling [simple :as simple]]))
 
 (def ^{:private true
@@ -53,7 +53,7 @@
 (defn -main
   "標準入力からユーザーの発言を受け取り、Responder の結果を表示して繰り返す。"
   [& args]
-  (println (format "Unmo version %s launched." (:unmo-version env)))
+  (println (format "Unmo version %s launched." unmo-version))
   (print "> ")
   (flush)
 
