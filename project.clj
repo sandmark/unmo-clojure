@@ -1,4 +1,4 @@
-(defproject unmo "0.1.0-SNAPSHOT"
+(defproject unmo "0.1.0"
   :description "A japanese legacy chatbot using Sudachi, a morphological analyser for modern era."
   :url "https://github.com/sandmark/unmo-clojure/"
   :license {:name "Eclipse Public License"
