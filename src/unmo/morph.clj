@@ -3,8 +3,13 @@
 
 (def ^:private tokenizer
   "Sudachiの形態素解析インスタンス"
-  (let [settings (slurp "sudachi_fulldict.json" :encoding "UTF-8")]
-    (-> (DictionaryFactory.) (.create settings) (.create))))
+  (try
+    (let [settings (slurp "sudachi_fulldict.json" :encoding "UTF-8")]
+      (-> (DictionaryFactory.) (.create settings) (.create)))
+    (catch java.io.FileNotFoundException e
+      (println (.getMessage e))
+      (println "形態素解析ライブラリSudachiの設定ファイルと辞書を用意してください。")
+      (System/exit 1))))
 
 (def ^:private split-mode
   "Sudachiの形態素解析オプション"
