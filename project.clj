@@ -5,7 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :repositories [["Sonatype" "https://oss.sonatype.org/content/repositories/snapshots"]]
   :dependencies [[org.clojure/clojure "1.10.0"]
-                 [environ "1.1.0"]
                  [bigml/sampling "3.2"]
                  [fipp "0.6.14"]
                  [com.worksap.nlp/sudachi "0.1.1-SNAPSHOT"]]
