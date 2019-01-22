@@ -71,7 +71,9 @@
 (defn save-dictionary
   "辞書dictionaryをpprintし、指定されたファイルに保存する。"
   [dictionary filename]
-  (let [data (with-out-str (fipp dictionary))]
+  (let [data (with-out-str
+               (binding [*print-length* false]
+                 (fipp dictionary)))]
     (spit filename data :encoding "UTF-8")))
 
 (defn load-dictionary
