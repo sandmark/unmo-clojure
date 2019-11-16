@@ -1,21 +1,19 @@
 (ns unmo.util-test
-  (:require [clojure.test :refer :all]
-            [unmo.util :refer :all]))
+  (:require [clojure.test :as t]
+            [unmo.util :as util]))
 
-(deftest conj-unique-test
-  (testing "conj-uniqueは"
-    (testing "要素をコレクションに追加する"
-      (is (= [:x]
-             (conj-unique [] :x))))
+(t/deftest conj-unique-test
+  (t/testing "conj"
+    (t/is (= [:x]
+             (util/conj-unique [] :x))))
 
-    (testing "コレクションに存在する要素は追加しない"
-      (is (= [:x]
-             (conj-unique [:x] :x))))))
+  (t/testing "uniqueness"
+    (t/is (= [:x]
+             (util/conj-unique [:x] :x)))))
 
-(deftest file-exists?-test
-  (testing "file-exists?は"
-    (testing "ファイルが存在しない場合falseを返す"
-      (is (false? (file-exists? "dummy.txt"))))
+(t/deftest file-exists?-test
+  (t/testing "exists"
+    (t/is (true? (util/file-exists? "project.clj"))))
 
-    (testing "ファイルが存在する場合trueを返す"
-      (is (true? (file-exists? "project.clj"))))))
+  (t/testing "doesn't exists"
+    (t/is (false? (util/file-exists? "dummy.clj")))))

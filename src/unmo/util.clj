@@ -1,9 +1,7 @@
 (ns unmo.util
   (:require [clojure.java.io :as io]))
 
-(defn conj-unique
-  "コレクションcollに要素xがない場合のみconjを適用する。"
-  [coll x]
+(defn conj-unique [coll x]
   (if (some #{x} coll)
     coll
     (conj coll x)))
