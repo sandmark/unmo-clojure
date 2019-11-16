@@ -1,15 +1,30 @@
 (ns unmo.core-test
-  (:require [clojure.test :refer :all]
-            [clojure.string :refer [includes? starts-with?]]
+  (:require [clojure.string :refer [includes? starts-with?]]
             [unmo.core :refer :all]
             [unmo.morph :refer [analyze]]))
+
+(deftest study-random-test
+  (let [study-random #'unmo.dictionary/study-random]
+    (testing "study-randomは"
+      (testing "発言inputを学習した辞書dictionaryを返す"
+        (is (= {:random ["test"]}
+               (study-random {} "test"))))
+
+      (testing "重複した発言は学習しない"
+        (is (= {:random ["test"]}
+               (study-random {:random ["test"]} "test")))))))
+
+(deftest load-dictionary-test
+  (testing "loadは"
+    (testing "ファイルが存在しない場合、空の辞書を返す"
+      (is (= {} (load-dictionary "dummy.txt"))))))
 
 (deftest dialogue-test
   (testing "dialogueは"
     (let [dialogue #'unmo.core/dialogue]
       (testing "input parts dictionaryを受け取り"
-        (let [input "あたしはプログラムの女の子です"
-              parts (analyze input)
+        (let [input      "あたしはプログラムの女の子です"
+              parts      (analyze input)
               dictionary {}]
           (testing "response文字列を返す"
             (let [result (dialogue input parts {:random ["test"]})]
@@ -25,8 +40,8 @@
                 (is (starts-with? result "Random>")))))))
 
       (testing "input parts dictionary responderが指定された場合"
-        (let [input "あたしはプログラムの女の子です"
-              parts (analyze input)
+        (let [input      "あたしはプログラムの女の子です"
+              parts      (analyze input)
               dictionary {:pattern {"プログラム" ["あたしが好きなのは%noun%と%noun%です"]}}]
           (testing "指定されたResponderを呼び出す"
             (let [result (dialogue input parts dictionary :pattern)]

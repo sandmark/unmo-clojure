@@ -1,7 +1,6 @@
 (ns unmo.dictionary
   (:require [unmo.util :refer [conj-unique file-exists?]]
-            [unmo.morph :refer [noun?]]
-            [fipp.edn :refer [pprint] :rename {pprint fipp}]))
+            [unmo.morph :refer [noun?]]))
 
 (defn- parts->markov
   "形態素解析結果をマルコフ辞書形式に変換する。"
@@ -67,18 +66,3 @@
       (study-pattern input parts)
       (study-template parts)
       (study-markov parts)))
-
-(defn save-dictionary
-  "辞書dictionaryをpprintし、指定されたファイルに保存する。"
-  [dictionary filename]
-  (let [data (with-out-str
-               (binding [*print-length* false]
-                 (fipp dictionary)))]
-    (spit filename data :encoding "UTF-8")))
-
-(defn load-dictionary
-  "指定されたファイルから辞書をロードして返す。"
-  [filename]
-  (if (file-exists? filename)
-    (-> filename (slurp :encoding "UTF-8") (read-string))
-    {}))

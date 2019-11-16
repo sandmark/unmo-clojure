@@ -1,15 +1,32 @@
 (ns unmo.core
   (:gen-class)
   (:require [unmo.responder :refer [response]]
-            [unmo.dictionary :refer [study save-dictionary load-dictionary]]
+            [unmo.dictionary :refer [study]]
             [unmo.morph :refer [analyze]]
             [unmo.version :refer [unmo-version]]
-            [bigml.sampling [simple :as simple]]))
+            [bigml.sampling [simple :as simple]]
+            [fipp.edn :refer [pprint] :rename {pprint fipp}]
+            [unmo.util :as util]))
 
 (def ^{:private true
-       :doc "デフォルトで使用される辞書ファイル名"}
+       :doc     "デフォルトで使用される辞書ファイル名"}
   dictionary-file
-  "dict.clj")
+  "dict.edn")
+
+(defn save-dictionary
+  "辞書dictionaryをpprintし、指定されたファイルに保存する。"
+  [dictionary filename]
+  (let [data (with-out-str
+               (binding [*print-length* false]
+                 (fipp dictionary)))]
+    (spit filename data :encoding "UTF-8")))
+
+(defn load-dictionary
+  "指定されたファイルから辞書をロードして返す。"
+  [filename]
+  (if (util/file-exists? filename)
+    (-> filename (slurp :encoding "UTF-8") (read-string))
+    {}))
 
 (defn- rand-responder
   "確率によって変動するResponderを返す。
