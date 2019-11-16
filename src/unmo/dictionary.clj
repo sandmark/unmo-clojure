@@ -64,7 +64,7 @@
                  こんにちは)              => {:random [こんにちは]}
   "
   [dictionary input]
-  (update dictionary :random util/conj-unique input))
+  (update dictionary :random (fnil util/conj-unique []) input))
 
 (defn study
   "文字列inputと形態素解析結果partsを受け取り、辞書dictionaryに保存したものを返す。"
