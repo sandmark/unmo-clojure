@@ -43,15 +43,27 @@
         (update-in dictionary [:template nouns-count] util/conj-unique template)))))
 
 (defn- study-pattern
-  "形態素解析結果に基づき、名詞をキー、発言のベクタを値として学習する。重複は学習しない。
-   学習した結果をdictionaryの:patternに定義して返す。"
-  [dictinoary input parts]
-  (let [nouns        (->> parts (filter morph/noun?) (map first))
-        merge-unique (partial merge-with (comp distinct concat))
-        make-pattern #(update %1 %2 util/conj-unique input)]
-    (->> nouns
-         (reduce make-pattern {})
-         (update-in dictinoary [:pattern] merge-unique))))
+  "Returns a new map with the input and the parts added to a map,
+  referred by :pattern key. The pattern dictionary is formed
+  {noun [sentences-includes-noun...]}
+
+  For instance:
+      if the `input` was あたしはプログラムの女の子です and
+      if the `parts` was [[プログラム 名詞] [女の子 名詞]] roughly, then
+
+      result will be {:pattern {プログラム [あたしはプログラムの女の子です]
+                                女の子    [あたしはプログラムの女の子です]}}
+
+  Note that `parts` could have more informations though
+  this function handles only nouns, not verbs nor others.
+  When the `input` has a noun which is already in the dictionary,
+  it'll be added to the value vector, keeping uniqueness.
+  "
+  [dictionary input parts]
+  (let [nouns (->> parts (filter morph/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
+    (letfn [(update-noun [m _ v]
+              (update m v (fnil util/conj-unique []) input))]
+      (update dictionary :pattern #(reduce-kv update-noun % nouns)))))
 
 (defn- study-random
   "Returns a new map with the input added to a vector, referred by :random key.
