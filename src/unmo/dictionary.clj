@@ -1,6 +1,22 @@
 (ns unmo.dictionary
-  (:require [unmo.util :as util]
-            [unmo.morph :as morph]))
+  (:require [unmo.morph :as morph]))
+
+(defn- conj-with-distinct
+  "Returns a new collection with the x 'added' if the coll didn't
+  have the x, otherwise just returns the coll."
+  [coll x]
+  (if (some #{x} coll)
+    coll
+    (conj coll x)))
+
+(defn- add-sentence
+  "Returns a new vector with the x 'added' if coll don't have the x,
+  otherwise returns a vector converted from the coll."
+  [coll x]
+  (let [result ((fnil conj-with-distinct []) coll x)]
+    (if (vector? result)
+      result
+      (into [] result))))
 
 (defn- parts->markov
   "形態素解析結果をマルコフ辞書形式に変換する。"
@@ -11,9 +27,9 @@
 
   ([dictionary prefix1 prefix2 [suffix & rest]]
    (if (not suffix)
-     (update-in dictionary [prefix1 prefix2] util/conj-unique "%ENDMARK%")
+     (update-in dictionary [prefix1 prefix2] add-sentence "%ENDMARK%")
      (-> dictionary
-         (update-in [prefix1 prefix2] util/conj-unique suffix)
+         (update-in [prefix1 prefix2] add-sentence suffix)
          (recur prefix2 suffix rest)))))
 
 (defn- study-markov
@@ -48,7 +64,7 @@
           template    (->> parts (map ->noun) (apply str))]
       (if (zero? nouns-count)
         dictionary
-        (update-in dictionary [:template nouns-count] (fnil util/conj-unique []) template)))))
+        (update-in dictionary [:template nouns-count] add-sentence template)))))
 
 (defn- study-pattern
   "Returns a new map with the input and the parts added to a map,
@@ -70,7 +86,7 @@
   [dictionary input parts]
   (let [nouns (->> parts (filter morph/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
     (letfn [(update-noun [m _ v]
-              (update m v (fnil util/conj-unique []) input))]
+              (update m v add-sentence input))]
       (update dictionary :pattern #(reduce-kv update-noun % nouns)))))
 
 (defn- study-random
@@ -84,7 +100,7 @@
                  こんにちは)              => {:random [こんにちは]}
   "
   [dictionary input]
-  (update dictionary :random (fnil util/conj-unique []) input))
+  (update dictionary :random add-sentence input))
 
 (defn study
   "文字列inputと形態素解析結果partsを受け取り、辞書dictionaryに保存したものを返す。"
