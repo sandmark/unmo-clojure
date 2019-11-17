@@ -28,19 +28,27 @@
           (update-in [:markov :dictionary] parts->markov parts)))))
 
 (defn- study-template
-  "形態素解析結果に基づき、名詞の数をキー、名詞を%noun%に置き換えた発言のリストを値として学習する。
-  重複、ないし名詞が無い発言は学習しない。
-  学習した結果をdictionaryの:templateに定義して返す。"
+  "Returns a new map with the parts as a template added to a map,
+  referred by :template key. The template dictionary is formed
+  {nouns-count [templates ...]}. If the parts has no nouns then
+  just returns the dictionary.
+
+  The template is a string built from parts, nouns replaced with
+  a %noun% mark, i.e, あたしはプログラムです will be あたしは%noun%です.
+  In this case the sentence has only one noun so the result will be:
+
+  {:template {1 [あたしは%noun%です]}}
+
+  Note that the key of the template dictionary is a count of nouns.
+  "
   [dictionary parts]
   (letfn [(->noun [[word _ :as part]]
-            (if (morph/noun? part)
-              "%noun%"
-              word))]
-    (let [nouns-count (->> parts (filter morph/noun?) (count))
-          template    (->> parts (map ->noun)   (apply str))]
+            (if (morph/noun? part) "%noun%" word))]
+    (let [nouns-count (->> parts (filter morph/noun?) count)
+          template    (->> parts (map ->noun) (apply str))]
       (if (zero? nouns-count)
         dictionary
-        (update-in dictionary [:template nouns-count] util/conj-unique template)))))
+        (update-in dictionary [:template nouns-count] (fnil util/conj-unique []) template)))))
 
 (defn- study-pattern
   "Returns a new map with the input and the parts added to a map,
