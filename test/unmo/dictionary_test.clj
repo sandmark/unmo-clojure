@@ -1,137 +1,186 @@
 (ns unmo.dictionary-test
-  (:require [clojure.test :refer :all]
-            [unmo.dictionary :refer :all]
-            [unmo.morph :refer :all]))
+  (:require [clojure.test :as t]
+            [fudje.core :as fj]
+            [unmo.dictionary :as dict]
+            [fudje.sweet :as fs]))
 
-(deftest study-test
-  (let [study-random   #'unmo.dictionary/study-random
-        study-pattern  #'unmo.dictionary/study-pattern
-        study-template #'unmo.dictionary/study-template
-        study-markov   #'unmo.dictionary/study-markov
-        text  "あたしはプログラムの女の子です"
-        parts (analyze text)]
-    (testing "studyは"
-      (testing "study-randomを呼び出す"
-        (let [dictionary (study-random {} text)]
-          (is (= (:random dictionary)
-                 (:random (study {} text parts))))))
+(t/deftest conj-with-distinct-test
+  (t/testing "Addition"
+    (t/is (compatible (#'dict/conj-with-distinct nil :a)
+                      (fs/just '(:a)))))
 
-      (testing "study-patternを呼び出す"
-        (let [dictionary (study-pattern {} text parts)]
-          (is (= (:pattern dictionary)
-                 (:pattern (study {} text parts))))))
+  (t/testing "Uniqueness"
+    (t/is (compatible (#'dict/conj-with-distinct '(:a) :a)
+                      (fs/just '(:a))))))
 
-      (testing "study-templateを呼び出す"
-        (let [dictionary (study-template {} parts)]
-          (is (= (:template dictionary)
-                 (:template (study {} text parts))))))
+(t/deftest add-sentence-test
+  (t/testing "Addition for nil"
+    (t/is (vector? (#'dict/add-sentence nil :a))))
 
-      (testing "study-markovを呼び出す"
-        (let [dictionary (study-markov {} parts)]
-          (is (= (:markov dictionary)
-                 (:markov (study {} text parts)))))))))
+  (t/testing "Returns vector"
+    (t/is (vector? (#'dict/add-sentence '() :a)))
+    (t/is (vector? (#'dict/add-sentence '(:a) :a)))))
 
-(deftest parts->markov-test
-  (let [parts->markov #'unmo.dictionary/parts->markov]
-    (testing "parts->markovは"
-      (let [dictionary {"あたし" {"は" ["プログラム"]},
-                        "は" {"プログラム" ["の"]},
-                        "プログラム" {"の" ["女の子"]},
-                        "の" {"女の子" ["です"]},
-                        "女の子" {"です" ["%ENDMARK%"]}}
-            merged     {"あたし" {"は" ["プログラム"] "が" ["好き"]}
-                        "は" {"プログラム" ["の"] "おしゃべり" ["と"]}
-                        "プログラム" {"の" ["女の子"]}
-                        "の" {"女の子" ["です"] "は" ["おしゃべり"]}
-                        "女の子" {"です" ["%ENDMARK%"]}
-                        "が" {"好き" ["な"]}
-                        "好き" {"な" ["の"]}
-                        "な" {"の" ["は"]}
-                        "おしゃべり" {"と" ["月餅"]}
-                        "と" {"月餅" ["です"]}
-                        "月餅" {"です" ["%ENDMARK%"]}}]
-        (testing "形態素解析結果をマルコフ辞書形式に変換する"
-          (let [parts (analyze "あたしはプログラムの女の子です")]
-            (is (= dictionary (parts->markov {} parts)))))
+;; --------------------------------------------------
+;; Dictionary Test
+;;
+(def sentences [["あたしはプログラムの女の子です"
+                 [["あたし" "代名詞,*,*,*,*,*"]
+                  ["は" "助詞,係助詞,*,*,*,*"]
+                  ["プログラム" "名詞,普通名詞,サ変可能,*,*,*"]
+                  ["の" "助詞,格助詞,*,*,*,*"]
+                  ["女の子" "名詞,普通名詞,一般,*,*,*"]
+                  ["です" "助動詞,*,*,*,助動詞-デス,終止形-一般"]]]
 
-        (testing "初期値を指定した場合、マージされた辞書を返す"
-          (let [parts (analyze "あたしが好きなのはおしゃべりと月餅です")]
-            (is (= merged (parts->markov dictionary parts)))))))))
+                ["あたしが好きなのはおしゃべりと月餅です"
+                 [["あたし" "代名詞,*,*,*,*,*"]
+                  ["が" "助詞,格助詞,*,*,*,*"]
+                  ["好き" "形状詞,一般,*,*,*,*"]
+                  ["な" "助動詞,*,*,*,助動詞-ダ,連体形-一般"]
+                  ["の" "助詞,準体助詞,*,*,*,*"]
+                  ["は" "助詞,係助詞,*,*,*,*"]
+                  ["おしゃべり" "名詞,普通名詞,サ変可能,*,*,*"]
+                  ["と" "助詞,格助詞,*,*,*,*"]
+                  ["月餅" "名詞,普通名詞,一般,*,*,*"]
+                  ["です" "助動詞,*,*,*,助動詞-デス,終止形-一般"]]]
 
-(deftest study-markov-test
-  (let [study-markov #'unmo.dictionary/study-markov]
-    (testing "study-markovは"
-      (testing "3単語未満の文章は学習しない"
-        (let [result (->> "もういや"
-                          (analyze)
-                          (study-markov {}))]
-          (is (= {} result))))
+                ["あたしです"
+                 [["あたし" "代名詞,*,*,*,*,*"]
+                  ["です" "助動詞,*,*,*,助動詞-デス,終止形-一般"]]]])
 
-      (testing ":startsに「文章の開始単語」を記録する"
-        (let [result (->> "あたしはプログラムの女の子です"
-                          (analyze)
-                          (study-markov {}))]
-          (is (contains? (get result :markov) :starts))
-          (is (= 1 (get-in result [:markov :starts "あたし"])))))
+(def nouns ["プログラム" "女の子" "おしゃべり" "月餅"])
 
-      (testing ":startsの「文章の開始単語」は学習のたびに加算される"
-        (let [result (-> {}
-                         (study-markov (analyze "あたしはプログラムの女の子です"))
-                         (study-markov (analyze "あたしが好きなのはおしゃべりと月餅です")))]
-          (is (= 2 (get-in result [:markov :starts "あたし"])))))
+;; --------------------------------------------------
+;; Random Dictionary
+;;
+(t/deftest study-random-test
+  (let [text "test"]
+    (t/testing "New word"
+      (t/is
+       (compatible
+        (#'dict/study-random {} text)
+        (fs/contains {:random (fs/just [text])}))))
 
-      (testing ":dictionaryにマルコフ辞書を記録する"
-        (let [result (->> "あたしはプログラムの女の子です"
-                          (analyze)
-                          (study-markov {}))
-              markov (:markov result)
-              markov-dict (get-in result [:markov :dictionary])
-              prefix-count 5]
-          (is (contains? markov :dictionary))
-          (is (= prefix-count (count markov-dict)))
-          (are [prefix] (contains? markov-dict prefix)
-            "あたし" "は" "プログラム" "の" "女の子"))))))
+    (t/testing "A word already added"
+      (t/is
+       (compatible
+        (#'dict/study-random {:random [text]} text)
+        (fs/contains {:random (fs/just [text])}))))))
 
-(deftest study-template-test
-  (let [study-template #'unmo.dictionary/study-template]
-    (testing "study-templateは"
-      (let [dictionary {}
-            input "あたしはプログラムの女の子です"
-            parts (analyze input)]
-        (testing ":templateを持つMapを返す"
-          (is (contains? (study-template dictionary parts) :template)))
+;; --------------------------------------------------
+;; Pattern Dictionary
+;;
+(t/deftest study-pattern-test
+  (let [[[sentence1 parts1]
+         [sentence2 parts2]
+         [sentence3 parts3]] sentences
+        noun                 (first nouns)]
+    (letfn [(study [m]
+              (reduce-kv #'dict/study-pattern
+                         m
+                         {sentence1 parts1, sentence2 parts2}))]
+      (t/testing "Data structure"
+        (t/is
+         (compatible
+          (#'dict/study-pattern {} sentence1 parts1)
+          (fs/contains-in {:pattern {noun (fs/checker vector?)}}))))
 
-        (testing "名詞の数をキーにする"
-          (let [template (-> (study-template dictionary parts)
-                             (get :template))]
-            (is (contains? template 2))))
+      (t/testing "Nouns"
+        (t/is
+         (compatible
+          (-> {} study :pattern keys)
+          (fs/just nouns))))
 
-        (testing "発言の名詞部分を%noun%に変換する"
-          (let [result (-> (study-template dictionary parts)
-                           (get-in [:template 2])
-                           (first))]
-            (is (= "あたしは%noun%の%noun%です" result))))
+      (t/testing "Sentences"
+        (t/is
+         (compatible
+          (-> {} study :pattern vals flatten distinct)
+          (fs/just [sentence1 sentence2]))))
 
-        (testing "重複は学習しない"
-          (let [result (study-template dictionary parts)
-                doubled (study-template result parts)]
-            (is (= result doubled))))
+      (t/testing "Distinction"
+        (t/is
+         (compatible
+          (-> {} study study study)
+          (fs/contains-in {:pattern {(last nouns) (fs/checker #(= 1 (count %)))}}))))
 
-        (testing "名詞の無い発言は学習しない"
-          (let [parts (unmo.morph/analyze "学んではいけません")
-                result-dictionary (study-template dictionary parts)]
-            (is (= dictionary result-dictionary))
-            (is (not (contains? (:template result-dictionary) 0)))))))))
+      (t/testing "No nouns"
+        (t/is
+         (compatible
+          (#'dict/study-pattern {} sentence3 parts3)
+          (fs/contains {:pattern (fs/checker empty?)})))))))
 
-(deftest study-pattern-test
-  (let [study-pattern #'unmo.dictionary/study-pattern]
-    (testing "study-patternは発言inputと辞書dictionaryと形態素解析結果partsを受け取り"
-      (let [expect {:pattern {"プログラム" ["あたしはプログラムの女の子です"]
-                              "女の子"     ["あたしはプログラムの女の子です"]}}
-            input  "あたしはプログラムの女の子です"
-            parts  (analyze input)]
-        (testing "{'名詞' ['名詞を含む文章']}の形式で学習する"
-          (is (= expect (study-pattern {} input parts))))
+;; --------------------------------------------------
+;; Template Dictionary
+;;
+(t/deftest study-template-test
+  (let [[[_ parts1] [_ parts2] [_ no-nouns]] sentences
+        template1                            "あたしは%noun%の%noun%です"
+        template2                            "あたしが好きなのは%noun%と%noun%です"]
+    (t/testing "Data structure"
+      (t/is
+       (compatible
+        (#'dict/study-template {} parts1)
+        (fs/contains-in {:template {2
+                                    (fs/checker vector? (complement empty?))}}))))
 
-        (testing "重複は学習しない"
-          (is (= expect (study-pattern expect input parts))))))))
+    (t/testing "Study"
+      (t/is
+       (compatible
+        (-> {}
+            (#'dict/study-template parts1)
+            (#'dict/study-template parts2))
+        (fs/contains-in
+         {:template {2 (fs/just [template1 template2])}}))))
+
+    (t/testing "No nouns"
+      (t/is
+       (compatible
+        (#'dict/study-template {:template {}} no-nouns)
+        (fs/contains {:template (fs/checker empty?)}))))))
+
+;; --------------------------------------------------
+;; Markov Dictionary
+;;
+(t/deftest study-markov-test
+  (let [[[_ parts1] [_ parts2] [_ parts3]] sentences]
+    (letfn [(study-all [m]
+              (reduce-kv #(#'dict/study-markov %1 %3) m [parts1 parts2 parts3]))]
+      (t/testing "Data structure with 3 times nested"
+        (t/is (= 3 dict/markov-depth))
+        (t/is
+         (compatible
+          (study-all {})
+          (fs/contains-in {:markov {:starts     {"あたし" 2}
+                                    :dictionary {"女の子" {"です" [dict/markov-endmark]}
+                                                 "月餅"   {"です" [dict/markov-endmark]}
+                                                 "あたし" {"は" ["プログラム"]
+                                                           "が" ["好き"]}}}}))))
+
+      (t/testing "Data structure with 5 times nested"
+        (fj/mocking [dict/markov-depth => 5]
+          (t/is (= 5 dict/markov-depth))
+          (t/is
+           (compatible
+            (study-all {})
+            (fs/contains-in
+             {:markov
+              {:dictionary
+               {"あたし"     {"は" {"プログラム" {"の" ["女の子"]}}}
+                "は"         {"プログラム" {"の" {"女の子" ["です"]}}}
+                "プログラム" {"の" {"女の子" {"です" [dict/markov-endmark]}}}}}})))))
+
+      (t/testing "Addition"
+        (let [m (#'dict/study-markov {} parts1)]
+          (t/is
+           (compatible
+            (#'dict/study-markov m parts2)
+            (fs/contains-in
+             {:markov
+              {:dictionary
+               (fs/checker #(> (count %)
+                               (count (get-in m [:markov :dictionary]))))}})))))
+
+      (t/testing "Min words"
+        (t/is (< (count parts3) dict/markov-depth))
+        (t/is (compatible (#'dict/study-markov {:markov {}} parts3)
+                          (fs/contains {:markov (fs/checker empty?)})))))))
