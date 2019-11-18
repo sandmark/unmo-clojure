@@ -1,6 +1,9 @@
 (ns unmo.dictionary
   (:require [unmo.morph :as morph]))
 
+(def markov-endmark "%ENDMARK%")
+(def markov-depth 3)
+
 (defn- conj-with-distinct
   "Returns a new collection with the x 'added' if the coll didn't
   have the x, otherwise just returns the coll."
@@ -18,30 +21,59 @@
       result
       (into [] result))))
 
-(defn- parts->markov
-  "形態素解析結果をマルコフ辞書形式に変換する。"
-  ([dictionary [[prefix1 _] [prefix2 _] & parts]]
-   (->> parts
-        (map first)
-        (parts->markov dictionary prefix1 prefix2)))
-
-  ([dictionary prefix1 prefix2 [suffix & rest]]
-   (if (not suffix)
-     (update-in dictionary [prefix1 prefix2] add-sentence "%ENDMARK%")
-     (-> dictionary
-         (update-in [prefix1 prefix2] add-sentence suffix)
-         (recur prefix2 suffix rest)))))
+(defn- parts->slices
+  "Returns a vector with enough words to build the Markov dictionary
+  based on the depth."
+  [parts depth]
+  (letfn [(enough? [coll]
+            (> (count coll) (- depth 2)))]
+    (->> parts
+         (map first)
+         (partition-all depth 1)
+         (filter enough?)
+         (into []))))
 
 (defn- study-markov
-  "形態素解析結果から文節のつながりを記録し、学習する。
-  実装を簡単にするため、3単語以上で構成された文章のみ学習する。"
-  [dictionary parts]
-  (if (< (count parts) 3)
-    dictionary
-    (let [[start _] (first parts)]
-      (-> dictionary
-          (update-in [:markov :starts start] (fnil inc 0))
-          (update-in [:markov :dictionary] parts->markov parts)))))
+  "Returns a new map with Markov analysis results of the parts
+  merged into the dictionary's :markov key. If the depth and the endmark
+  are supplied (each defaults to `markov-depth` and `markov-endmark`),
+  endmark is used at the end of the sentence, and the resulting dictionary
+  is also nested with the depth value.
+
+  If the given parts is 'あたしはプログラムの女の子です',
+  the Markov dictionary will be as follows:
+
+  {:markov {:starts     {あたし 1}
+            :dictionary {あたし     {は [プログラム]}
+                         は         {プログラム [の]}
+                         プログラム {の [女の子]}
+                         の         {女の子 [です]}
+                         女の子     {です [%ENDMARK%]}}}}
+
+  In case of the depth is 3 and the endmark is %ENDMARK%,
+  the third nesting shows a vector that stores the 'next words'.
+  In the same way, if depth is 4 then the vector appears in the fourth nest,
+  and so on.
+
+  The :starts map stores the first word in the sentence and its frequency,
+  and the :dictionary map is a nested map that stores a vector of next words
+  according to the depth.
+  "
+  ([dictionary parts]
+   (study-markov dictionary parts markov-depth markov-endmark))
+
+  ([dictionary parts depth endmark]
+   (letfn [(build-markov [m _ words]
+             (let [index (dec depth)
+                   ks    (take index words)
+                   suf   (nth words index endmark)]
+               (update-in m ks add-sentence suf)))]
+     (if (< (count parts) depth)
+       dictionary
+       (-> dictionary
+           (update-in [:markov :starts (ffirst parts)] (fnil inc 0))
+           (update-in [:markov :dictionary]
+                      #(reduce-kv build-markov % (parts->slices parts depth))))))))
 
 (defn- study-template
   "Returns a new map with the parts as a template added to a map,
