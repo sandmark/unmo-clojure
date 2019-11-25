@@ -56,15 +56,6 @@
         (assoc params :response text))
       (assoc params :error {:type :no-match :message "パターンがありません"}))))
 
-(defmethod
-  ^{:doc "RandomResponderは入力に関係なく、:dictionary -> :random に定義されたVectorからランダムな値を返す。"}
-  response :random [{:keys [dictionary] :as params}]
-  (let [random (:random dictionary)]
-    (if (empty? random)
-      (assoc params :error {:message "ランダム辞書が空です。"
-                            :type :fatal})
-      (assoc params :response (rand-nth random)))))
-
 (defn response-what
   "Returns a string with a question mark appended to the end of
   the :input value of the given map."
@@ -76,3 +67,8 @@
   response :default [{:keys [responder]}]
   (throw (IllegalArgumentException.
           (str "Responder " responder " が存在しません。"))))
+(defn response-random
+  "Returns a random value from the set, :dictionary -> :random, of the given map.
+  When the set is empty, returns nil."
+  [{{random :random} :dictionary}]
+  (-> random seq rand-nth))
