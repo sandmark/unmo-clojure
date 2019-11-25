@@ -4,23 +4,6 @@
 (def markov-endmark "%ENDMARK%")
 (def markov-depth 3)
 
-(defn- conj-with-distinct
-  "Returns a new collection with the x 'added' if the coll didn't
-  have the x, otherwise just returns the coll."
-  [coll x]
-  (if (some #{x} coll)
-    coll
-    (conj coll x)))
-
-(defn- add-sentence
-  "Returns a new vector with the x 'added' if coll don't have the x,
-  otherwise returns a vector converted from the coll."
-  [coll x]
-  (let [result ((fnil conj-with-distinct []) coll x)]
-    (if (vector? result)
-      result
-      (into [] result))))
-
 (defn- parts->slices
   "Returns a vector with enough words to build the Markov dictionary
   based on the depth."
@@ -67,7 +50,7 @@
              (let [index (dec depth)
                    ks    (take index words)
                    suf   (nth words index endmark)]
-               (update-in m ks add-sentence suf)))]
+               (update-in m ks (fnil conj #{}) suf)))]
      (if (< (count parts) depth)
        dictionary
        (-> dictionary
@@ -96,7 +79,7 @@
           template    (->> parts (map ->noun) (apply str))]
       (if (zero? nouns-count)
         dictionary
-        (update-in dictionary [:template nouns-count] add-sentence template)))))
+        (update-in dictionary [:template nouns-count] (fnil conj #{}) template)))))
 
 (defn- study-pattern
   "Returns a new map with the input and the parts added to a map,
@@ -118,7 +101,7 @@
   [dictionary input parts]
   (let [nouns (->> parts (filter morph/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
     (letfn [(update-noun [m _ v]
-              (update m v add-sentence input))]
+              (update m v (fnil conj #{}) input))]
       (update dictionary :pattern #(reduce-kv update-noun % nouns)))))
 
 (defn- study-random
@@ -132,7 +115,7 @@
                  こんにちは)              => {:random [こんにちは]}
   "
   [dictionary input]
-  (update dictionary :random add-sentence input))
+  (update dictionary :random (fnil conj #{}) input))
 
 (defn study
   "文字列inputと形態素解析結果partsを受け取り、辞書dictionaryに保存したものを返す。"

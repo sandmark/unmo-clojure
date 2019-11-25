@@ -4,26 +4,6 @@
             [unmo.dictionary :as dict]
             [fudje.sweet :as fs]))
 
-(t/deftest conj-with-distinct-test
-  (t/testing "Addition"
-    (t/is (compatible (#'dict/conj-with-distinct nil :a)
-                      (fs/just '(:a)))))
-
-  (t/testing "Uniqueness"
-    (t/is (compatible (#'dict/conj-with-distinct '(:a) :a)
-                      (fs/just '(:a))))))
-
-(t/deftest add-sentence-test
-  (t/testing "Addition for nil"
-    (t/is (vector? (#'dict/add-sentence nil :a))))
-
-  (t/testing "Returns vector"
-    (t/is (vector? (#'dict/add-sentence '() :a)))
-    (t/is (vector? (#'dict/add-sentence '(:a) :a)))))
-
-;; --------------------------------------------------
-;; Dictionary Test
-;;
 (def sentences [["あたしはプログラムの女の子です"
                  [["あたし" "代名詞,*,*,*,*,*"]
                   ["は" "助詞,係助詞,*,*,*,*"]
@@ -59,13 +39,13 @@
       (t/is
        (compatible
         (#'dict/study-random {} text)
-        (fs/contains {:random (fs/just [text])}))))
+        (fs/contains {:random (fs/just #{text})}))))
 
     (t/testing "A word already added"
       (t/is
        (compatible
-        (#'dict/study-random {:random [text]} text)
-        (fs/contains {:random (fs/just [text])}))))))
+        (#'dict/study-random {:random #{text}} text)
+        (fs/contains {:random (fs/just #{text})}))))))
 
 ;; --------------------------------------------------
 ;; Pattern Dictionary
@@ -83,7 +63,7 @@
         (t/is
          (compatible
           (#'dict/study-pattern {} sentence1 parts1)
-          (fs/contains-in {:pattern {noun (fs/checker vector?)}}))))
+          (fs/contains-in {:pattern {noun (fs/checker set?)}}))))
 
       (t/testing "Nouns"
         (t/is
@@ -94,8 +74,8 @@
       (t/testing "Sentences"
         (t/is
          (compatible
-          (-> {} study :pattern vals flatten distinct)
-          (fs/just [sentence1 sentence2]))))
+          (->> {} study :pattern vals set)
+          (fs/just #{#{sentence1} #{sentence2}}))))
 
       (t/testing "Distinction"
         (t/is
@@ -121,7 +101,7 @@
        (compatible
         (#'dict/study-template {} parts1)
         (fs/contains-in {:template {2
-                                    (fs/checker vector? (complement empty?))}}))))
+                                    (fs/checker set? (complement empty?))}}))))
 
     (t/testing "Study"
       (t/is
@@ -130,7 +110,7 @@
             (#'dict/study-template parts1)
             (#'dict/study-template parts2))
         (fs/contains-in
-         {:template {2 (fs/just [template1 template2])}}))))
+         {:template {2 (fs/just #{template1 template2})}}))))
 
     (t/testing "No nouns"
       (t/is
@@ -151,8 +131,8 @@
          (compatible
           (study-all {})
           (fs/contains-in {:markov {:starts     {"あたし" 2}
-                                    :dictionary {"女の子" {"です" [dict/markov-endmark]}
-                                                 "月餅"   {"です" [dict/markov-endmark]}
+                                    :dictionary {"女の子" {"です" #{dict/markov-endmark}}
+                                                 "月餅"   {"です" #{dict/markov-endmark}}
                                                  "あたし" {"は" ["プログラム"]
                                                            "が" ["好き"]}}}}))))
 
@@ -165,9 +145,9 @@
             (fs/contains-in
              {:markov
               {:dictionary
-               {"あたし"     {"は" {"プログラム" {"の" ["女の子"]}}}
-                "は"         {"プログラム" {"の" {"女の子" ["です"]}}}
-                "プログラム" {"の" {"女の子" {"です" [dict/markov-endmark]}}}}}})))))
+               {"あたし"     {"は" {"プログラム" {"の" #{"女の子"}}}}
+                "は"         {"プログラム" {"の" {"女の子" #{"です"}}}}
+                "プログラム" {"の" {"女の子" {"です" #{dict/markov-endmark}}}}}}})))))
 
       (t/testing "Addition"
         (let [m (#'dict/study-markov {} parts1)]
