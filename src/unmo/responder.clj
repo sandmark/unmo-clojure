@@ -1,5 +1,6 @@
 (ns unmo.responder
-  (:require [unmo.morph :refer [noun?]]))
+  (:require [unmo.morph :refer [noun?]]
+            [clojure.string :as str]))
 
 (defmulti response
   "渡された発言オブジェクトに対する返答を :response キーに設定して返す。どの思考エンジンが使用されるかは :responder キーの値で変わる。"
@@ -44,18 +45,6 @@
           (assoc :error {:type :no-match
                          :message "一致するテンプレートがありません。"})))))
 
-(defmethod
-  ^{:doc "PatternResponderは入力inputに正規表現でマッチするパターンを探し、そのうちランダムなものを返す。"}
-  response :pattern [{:keys [input dictionary] :as params}]
-  (letfn [(match? [[pattern phrases]]
-            (-> (re-pattern pattern) (re-find input)))]
-    (if-let [[pattern phrases] (->> (:pattern dictionary) (filter match?) (first))]
-      (let [match  (-> (re-pattern pattern) (re-find input) (first))
-            phrase (rand-nth phrases)
-            text   (clojure.string/replace phrase #"%match%" match)]
-        (assoc params :response text))
-      (assoc params :error {:type :no-match :message "パターンがありません"}))))
-
 (defn response-what
   "Returns a string with a question mark appended to the end of
   the :input value of the given map."
@@ -72,3 +61,15 @@
   When the set is empty, returns nil."
   [{{random :random} :dictionary}]
   (-> random seq rand-nth))
+
+(defn response-pattern
+  "Searches the dictionary (:dictionary :pattern) for a pattern that
+  matches the given input, and returns a random response corresponding to the pattern,
+  replacing %match% with the matched string."
+  [{input :input {pattern :pattern} :dictionary}]
+  (letfn [(match [[r phrases]]
+            (when-let [matched (-> r re-pattern (re-find input) first)]
+              [matched phrases]))]
+    (when-let [[matched phrases] (first (keep match pattern))]
+      (let [phrase (-> phrases seq rand-nth)]
+        (str/replace phrase #"%match%" matched)))))
