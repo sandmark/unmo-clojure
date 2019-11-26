@@ -1,6 +1,7 @@
 (ns unmo.responder
   (:require [unmo.morph :refer [noun?]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [unmo.morph :as morph]))
 
 (defmulti response
   "渡された発言オブジェクトに対する返答を :response キーに設定して返す。どの思考エンジンが使用されるかは :responder キーの値で変わる。"
@@ -31,20 +32,6 @@
           prefix2 (-> (get markov prefix1) (keys) (rand-nth))]
       (assoc params :response (markov-generate markov prefix1 prefix2)))))
 
-(defmethod
-  ^{:doc "TemplateResponderは入力inputの名詞を調べ、辞書のテンプレートの%noun%をその名詞で置き換えて返す。"}
-  response :template [{:keys [parts dictionary] :as params}]
-  (let [nouns (->> parts (filter noun?) (map first))
-        nouns-count (count nouns)
-        ->response #(clojure.string/replace-first %1 #"%noun%" %2)]
-    (if-let [templates (get-in dictionary [:template nouns-count])]
-      (->> nouns
-           (reduce ->response (rand-nth templates))
-           (assoc params :response))
-      (-> params
-          (assoc :error {:type :no-match
-                         :message "一致するテンプレートがありません。"})))))
-
 (defn response-what
   "Returns a string with a question mark appended to the end of
   the :input value of the given map."
@@ -73,3 +60,20 @@
     (when-let [[matched phrases] (first (keep match pattern))]
       (let [phrase (-> phrases seq rand-nth)]
         (str/replace phrase #"%match%" matched)))))
+
+(defn response-template
+  "Returns a string in which %noun% is replaced with a noun contained in parts
+  of the template with the same number of nouns contained in the given parts.
+  When no template is matched, returns nil.
+
+  For example, if the parts is built from 'あたしはプログラムの女の子です',
+  the nouns included are 'プログラム' and '女の子', two nouns. And if
+  the template dictionary is {2 #{'%noun%はいい%noun%'}},
+  the result is 'プログラムはいい女の子'."
+  [{parts :parts {dictionary :template} :dictionary}]
+  (let [nouns (->> parts (filter morph/noun?) (map first))]
+    (when-let [template (-> dictionary
+                            (get (count nouns))
+                            seq
+                            rand-nth)]
+      (reduce #(str/replace-first %1 #"%noun%" %2) template nouns))))
