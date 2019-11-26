@@ -4,12 +4,15 @@
             [unmo.dictionary :as dict]))
 
 (def markov-word-max 30)
+(def what-suffix "？")
+(def pattern-matcher #"%match%")
+(def template-matcher (re-pattern dict/template-nounmark))
 
 (defn response-what
   "Returns a string with a question mark appended to the end of
   the :input value of the given map."
   [{:keys [input]}]
-  (str input "？"))
+  (str input what-suffix))
 
 (defn response-random
   "Returns a random value from the set, :dictionary -> :random, of the given map.
@@ -27,7 +30,7 @@
               [matched phrases]))]
     (when-let [[matched phrases] (first (keep match pattern))]
       (let [phrase (-> phrases seq rand-nth)]
-        (str/replace phrase #"%match%" matched)))))
+        (str/replace phrase pattern-matcher matched)))))
 
 (defn response-template
   "Returns a string in which %noun% is replaced with a noun contained in parts
@@ -44,7 +47,7 @@
                             (get (count nouns))
                             seq
                             rand-nth)]
-      (reduce #(str/replace-first %1 #"%noun%" %2) template nouns))))
+      (reduce #(str/replace-first %1 template-matcher %2) template nouns))))
 
 (defn response-markov
   "Returns a sentence generated based on a Markov chain starting from
