@@ -27,11 +27,11 @@
   the Markov dictionary will be as follows:
 
   {:markov {:starts     {あたし 1}
-            :dictionary {あたし     {は [プログラム]}
-                         は         {プログラム [の]}
-                         プログラム {の [女の子]}
-                         の         {女の子 [です]}
-                         女の子     {です [%ENDMARK%]}}}}
+            :dictionary {あたし     {は #{プログラム}}
+                         は         {プログラム #{の}}
+                         プログラム {の #{女の子}}
+                         の         {女の子 #{です}}
+                         女の子     {です #{%ENDMARK%}}}}}
 
   In case of the depth is 3 and the endmark is %ENDMARK%,
   the third nesting shows a vector that stores the 'next words'.
@@ -40,8 +40,7 @@
 
   The :starts map stores the first word in the sentence and its frequency,
   and the :dictionary map is a nested map that stores a vector of next words
-  according to the depth.
-  "
+  according to the depth."
   ([dictionary parts]
    (study-markov dictionary parts markov-depth markov-endmark))
 
@@ -68,10 +67,9 @@
   a %noun% mark, i.e, あたしはプログラムです will be あたしは%noun%です.
   In this case the sentence has only one noun so the result will be:
 
-  {:template {1 [あたしは%noun%です]}}
+  {:template {1 #{あたしは%noun%です}}}
 
-  Note that the key of the template dictionary is a count of nouns.
-  "
+  Note that the key of the template dictionary is a count of nouns."
   [dictionary parts]
   (letfn [(->noun [[word _ :as part]]
             (if (morph/noun? part) "%noun%" word))]
@@ -84,20 +82,19 @@
 (defn- study-pattern
   "Returns a new map with the input and the parts added to a map,
   referred by :pattern key. The pattern dictionary is formed
-  {noun [sentences-includes-noun...]}
+  {noun #{sentences-includes-noun...}}
 
   For instance:
       if the `input` was あたしはプログラムの女の子です and
       if the `parts` was [[プログラム 名詞] [女の子 名詞]] roughly, then
 
-      result will be {:pattern {プログラム [あたしはプログラムの女の子です]
-                                女の子    [あたしはプログラムの女の子です]}}
+      result will be {:pattern {プログラム #{あたしはプログラムの女の子です}
+                                女の子    #{あたしはプログラムの女の子です}}}
 
   Note that `parts` could have more informations though
   this function handles only nouns, not verbs nor others.
   When the `input` has a noun which is already in the dictionary,
-  it'll be added to the value vector, keeping uniqueness.
-  "
+  it'll be added to the value vector, keeping uniqueness."
   [dictionary input parts]
   (let [nouns (->> parts (filter morph/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
     (letfn [(update-noun [m _ v]
@@ -108,12 +105,11 @@
   "Returns a new map with the input added to a vector, referred by :random key.
   If the input already exists, just returns dictionary.
 
-  (study-random {:random []}
-                 こんにちは)              => {:random [こんにちは]}
+  (study-random {:random #{}}
+                 こんにちは)              => {:random #{こんにちは}}
 
-  (study-random {:random [こんにちは]}
-                 こんにちは)              => {:random [こんにちは]}
-  "
+  (study-random {:random #{こんにちは}}
+                 こんにちは)              => {:random #{こんにちは}}"
   [dictionary input]
   (update dictionary :random (fnil conj #{}) input))
 
