@@ -1,36 +1,9 @@
 (ns unmo.responder
-  (:require [unmo.morph :refer [noun?]]
-            [clojure.string :as str]
-            [unmo.morph :as morph]))
+  (:require [clojure.string :as str]
+            [unmo.morph :as morph]
+            [unmo.dictionary :as dict]))
 
-(defmulti response
-  "渡された発言オブジェクトに対する返答を :response キーに設定して返す。どの思考エンジンが使用されるかは :responder キーの値で変わる。"
-  :responder)
-
-(defn- markov-generate
-  "単語と辞書を受け取り、その単語から始まる文章をマルコフ連鎖で生成して返す。"
-  ([dictionary prefix1 prefix2] (markov-generate 30 dictionary prefix1 prefix2 [prefix1 prefix2]))
-  ([times dictionary prefix1 prefix2 result]
-   (let [suffix (-> dictionary (get-in [prefix1 prefix2]) (rand-nth))]
-     (cond (zero? times)          (apply str result)
-           (= "%ENDMARK%" suffix) (apply str result)
-           :else (->> (conj result suffix)
-                      (recur (dec times) dictionary prefix2 suffix))))))
-
-(defmethod
-  ^{:doc "MarkovResponderは形態素解析結果partsを受け取り、最初の単語またはランダムな単語から始まる文章を生成して返す。"}
-  response :markov [{:keys [parts dictionary] :as params}]
-  (if (empty? (:markov dictionary))
-    (assoc params :error {:type :dictionary-empty
-                          :message "マルコフ辞書が空です"})
-    (let [starts (get-in dictionary [:markov :starts])
-          markov (get-in dictionary [:markov :dictionary])
-          word   (ffirst parts)
-          prefix1 (if (contains? starts word)
-                    word
-                    (-> starts (keys) (rand-nth)))
-          prefix2 (-> (get markov prefix1) (keys) (rand-nth))]
-      (assoc params :response (markov-generate markov prefix1 prefix2)))))
+(def markov-word-max 30)
 
 (defn response-what
   "Returns a string with a question mark appended to the end of
@@ -38,11 +11,6 @@
   [{:keys [input]}]
   (str input "？"))
 
-(defmethod
-  ^{:doc "Responderの指定がない、もしくは存在しないResponderを指定された場合、IllegalArgumentException例外を投げる。"}
-  response :default [{:keys [responder]}]
-  (throw (IllegalArgumentException.
-          (str "Responder " responder " が存在しません。"))))
 (defn response-random
   "Returns a random value from the set, :dictionary -> :random, of the given map.
   When the set is empty, returns nil."
@@ -77,3 +45,51 @@
                             seq
                             rand-nth)]
       (reduce #(str/replace-first %1 #"%noun%" %2) template nouns))))
+
+(defn response-markov
+  "Returns a sentence generated based on a Markov chain starting from
+  the first word of the input (beginning of the parts). If the first word
+  doesn't exist in the dictionary, randomly picks a word from the dictionary's
+  :starts map and generates a sentence.
+
+  For example, if parts starts with 'あたし' and the dictionary looks like this:
+
+  {:markov {:starts     {あたし 2}
+            :dictionary {あたし     {は #{プログラム}, が #{好き}},
+                         は         {プログラム #{の}, おしゃべり #{と}},
+                         女の子     {です #{%ENDMARK%}},
+                         おしゃべり {と #{月餅}},
+                         な         {の #{は}},
+                         月餅       {です #{%ENDMARK%}},
+                         と         {月餅 #{です}},
+                         プログラム {の #{女の子}},
+                         好き       {な #{の}},
+                         が         {好き #{な}},
+                         の         {女の子 #{です}, は #{おしゃべり}}}}}
+
+  sentences that start with 'あたし' and end with 'です' are:
+
+  #{あたしはプログラムの女の子です
+     あたしが好きなの女の子です
+     あたしが好きなのはおしゃべりと月餅です}
+
+  TODO: Fix hardcode assuming Markov dictionary depth is 3"
+  [{parts :parts {{starts :starts dictionary :dictionary} :markov} :dictionary}]
+  (letfn [(choose-suffix [word]
+            (let [prefix (-> dictionary (get word) keys rand-nth)
+                  suffix (-> dictionary (get-in [word prefix]) seq rand-nth)]
+              [prefix suffix]))
+
+          (generate [[word :as words] _]
+            (let [[prefix suffix] (choose-suffix word)]
+              (if (= suffix dict/markov-endmark)
+                (reduced (conj words prefix))
+                (conj words prefix suffix))))]
+    (when (seq dictionary)
+      (let [start (if (contains? starts (ffirst parts))
+                    (list (ffirst parts))
+                    (list (-> starts keys rand-nth)))]
+        (->> (range markov-word-max)
+             (reduce generate start)
+             reverse
+             (apply str))))))
