@@ -1,6 +1,7 @@
 (ns unmo.dictionary
   (:require [unmo.morph :as morph]))
 
+(def template-nounmark "%noun%")
 (def markov-endmark "%ENDMARK%")
 (def markov-depth 3)
 
@@ -53,7 +54,7 @@
   Note that the key of the template dictionary is a count of nouns."
   [dictionary parts]
   (letfn [(->noun [[word _ :as part]]
-            (if (morph/noun? part) "%noun%" word))]
+            (if (morph/noun? part) template-nounmark word))]
     (let [nouns-count (->> parts (filter morph/noun?) count)
           template    (->> parts (map ->noun) (apply str))]
       (if (zero? nouns-count)

@@ -94,8 +94,10 @@
 ;;
 (t/deftest study-template-test
   (let [[[_ parts1] [_ parts2] [_ no-nouns]] sentences
-        template1                            "あたしは%noun%の%noun%です"
-        template2                            "あたしが好きなのは%noun%と%noun%です"]
+        template1                            (str "あたしは" dict/template-nounmark
+                                                  "の" dict/template-nounmark "です")
+        template2                            (str "あたしが好きなのは" dict/template-nounmark
+                                                  "と" dict/template-nounmark "です")]
     (t/testing "Data structure"
       (t/is
        (compatible
