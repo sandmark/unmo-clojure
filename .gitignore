@@ -10,3 +10,4 @@ pom.xml.asc
 .hgignore
 .hg/
 system_full.dic
+dict.edn
