@@ -24,7 +24,7 @@
 (defn load-dictionary
   "指定されたファイルから辞書をロードして返す。"
   [filename]
-  (if (util/file-exists? filename)
+  (if (.exists (io/as-file filename))
     (-> filename (slurp :encoding "UTF-8") (read-string))
     {}))
 
