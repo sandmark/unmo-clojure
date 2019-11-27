@@ -1,4 +1,4 @@
-(defproject unmo "0.1.1"
+(defproject unmo "0.1.2"
   :description "Unmo: A simple japanese chatbot."
   :url "https://github.com/sandmark/unmo-clojure/"
   :license {:name "Eclipse Public License"
