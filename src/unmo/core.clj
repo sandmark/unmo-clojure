@@ -3,8 +3,9 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [fipp.edn :as fipp]
+            [sudachi-clj.core :as sudachi]
+            [sudachi-clj.system :as sudsys]
             [unmo.dictionary :as dict]
-            [unmo.morph :as morph]
             [unmo.responder :as resp]
             [unmo.version :as ver]))
 
@@ -64,6 +65,7 @@
      (dialogue input parts dictionary :what))))
 
 (defn -main [& args]
+  (sudsys/start :dictionary-file "system_full.dic")
   (println (format "Unmo version %s launched." ver/unmo-version))
   (print "> ")
   (flush)
@@ -71,10 +73,11 @@
   (loop [input      (read-line)
          dictionary (load-dictionary dictionary-file)]
     (if (str/blank? input)
-      (do (println "Saving dictionary...")
+      (do (println "Shutting down...")
+          (sudsys/stop)
           (save-dictionary dictionary dictionary-file)
           (println "Quit."))
-      (let [parts (morph/analyze input)
+      (let [parts (sudachi/analyze input)
             res   (dialogue input parts dictionary)]
         (println res)
         (print "> ")

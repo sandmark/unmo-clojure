@@ -1,6 +1,6 @@
 (ns unmo.responder
   (:require [clojure.string :as str]
-            [unmo.morph :as morph]
+            [sudachi-clj.core :as sudachi]
             [unmo.dictionary :as dict]))
 
 (def markov-word-max 30)
@@ -42,7 +42,7 @@
   the template dictionary is {2 #{'%noun%はいい%noun%'}},
   the result is 'プログラムはいい女の子'."
   [{parts :parts {dictionary :template} :dictionary}]
-  (let [nouns (->> parts (filter morph/noun?) (map first))]
+  (let [nouns (->> parts (filter sudachi/noun?) (map first))]
     (when-let [template (-> dictionary
                             (get (count nouns))
                             seq

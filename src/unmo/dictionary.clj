@@ -1,5 +1,5 @@
 (ns unmo.dictionary
-  (:require [unmo.morph :as morph]))
+  (:require [sudachi-clj.core :as sudachi]))
 
 (def template-nounmark "%noun%")
 (def markov-endmark "%ENDMARK%")
@@ -34,7 +34,7 @@
   When the `input` has a noun which is already in the dictionary,
   it'll be added to the value vector, keeping uniqueness."
   [dictionary input parts]
-  (let [nouns (->> parts (filter morph/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
+  (let [nouns (->> parts (filter sudachi/noun?) (mapv first))]  ; this must be vector for `reduce-kv`
     (letfn [(update-noun [m _ v]
               (update m v (fnil conj #{}) input))]
       (update dictionary :pattern #(reduce-kv update-noun % nouns)))))
@@ -54,8 +54,8 @@
   Note that the key of the template dictionary is a count of nouns."
   [dictionary parts]
   (letfn [(->noun [[word _ :as part]]
-            (if (morph/noun? part) template-nounmark word))]
-    (let [nouns-count (->> parts (filter morph/noun?) count)
+            (if (sudachi/noun? part) template-nounmark word))]
+    (let [nouns-count (->> parts (filter sudachi/noun?) count)
           template    (->> parts (map ->noun) (apply str))]
       (if (zero? nouns-count)
         dictionary
