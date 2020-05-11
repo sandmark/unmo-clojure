@@ -1,5 +1,5 @@
 (ns unmo.dictionary
-  (:require [unmo.helper :as helper]))
+  (:require [sudachi-clj.helper :as helper]))
 
 (def template-nounmark "%noun%")
 (def markov-endmark "%ENDMARK%")

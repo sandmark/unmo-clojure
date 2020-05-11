@@ -1,6 +1,6 @@
 (ns unmo.responder
   (:require [clojure.string :as str]
-            [unmo.helper :as helper]
+            [sudachi-clj.helper :as helper]
             [unmo.dictionary :as dict]))
 
 (def markov-word-max 30)
