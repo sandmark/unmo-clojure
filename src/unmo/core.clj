@@ -4,19 +4,17 @@
             [clojure.string :as str]
             [fipp.edn :as fipp]
             [sudachi-clj.core :as sudachi]
-            [sudachi-clj.system :as sudsys]
             [unmo.dictionary :as dict]
             [unmo.responder :as resp]
             [unmo.version :as ver]))
 
 (def dictionary-file "dict.edn")
 
-(def responders
-  {:what     resp/response-what
-   :random   resp/response-random
-   :pattern  resp/response-pattern
-   :template resp/response-template
-   :markov   resp/response-markov})
+(def responders {:what     resp/response-what
+                 :random   resp/response-random
+                 :pattern  resp/response-pattern
+                 :template resp/response-template
+                 :markov   resp/response-markov})
 
 (defn save-dictionary
   "Saves the result of pprint the map dictionary to the specified filename."
@@ -65,7 +63,7 @@
      (dialogue input parts dictionary :what))))
 
 (defn -main [& args]
-  (sudsys/start :dictionary-file "system_full.dic")
+  (sudachi/start :dictionary-file "system_full.dic")
   (println (format "Unmo version %s launched." ver/unmo-version))
   (print "> ")
   (flush)
@@ -74,7 +72,7 @@
          dictionary (load-dictionary dictionary-file)]
     (if (str/blank? input)
       (do (println "Shutting down...")
-          (sudsys/stop)
+          (sudachi/stop)
           (save-dictionary dictionary dictionary-file)
           (println "Quit."))
       (let [parts (sudachi/analyze input)
