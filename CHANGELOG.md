@@ -1,6 +1,11 @@
 # Change Log
 
 ## [Unreleased]
+
+## [0.1.2] - 2020-05-14
+### Changed
+- 形態素解析ライブラリを Sudachi から Kuromoji へ変更
+
 ### Changed
 - 辞書の読み込みに edn を使用するよう変更
 
@@ -12,5 +17,6 @@
 ### Published
 - Initial Release
 
-[Unreleased]: https://github.com/sandmark/unmo-clojure/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/sandmark/unmo-clojure/compare/0.1.2...HEAD
+[0.1.2]: https://github.com/sandmark/unmo-clojure/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/sandmark/unmo-clojure/compare/0.1.0...0.1.1
