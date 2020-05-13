@@ -16,15 +16,7 @@ Unmo は日本語チャットボットプログラムです。機械学習では
 ### 必要なもの
 実行には JVM（Java 仮想マシン）が必要です。https://java.com/ja/download/ からダウンロード・インストールしてください。
 
-また、形態素解析エンジンとして [Sudachi](https://github.com/WorksApplications/Sudachi/releases) を使用しています。辞書ファイルが必要になりますので、リンク先から `sudachi-0.1.1-dictionary-full.zip` をダウンロード・展開し、 `system_full.dic` を `unmo-x.x.x-standalone.jar` と同じディレクトリに置いてください。
-
 Unmo 本体は https://github.com/sandmark/unmo-clojure/releases からダウンロードすることができます。
-
-- `system_full.dic`
-- `sudachi_fulldict.json`
-- `unmo-x.x.x-standalone.jar`
-
-上記 3 つのファイルが同じディレクトリにあれば準備完了です。
 
 ## 使い方
 
@@ -32,8 +24,8 @@ Unmo はコンソールアプリケーションであるため、コマンドを
 
 Unix 系なら端末エミュレータ、Mac OS ならターミナル、Windows ならコマンドプロンプトを起動し、 `cd` コマンドで `unmo-x.x.x-standalone.jar` のあるディレクトリへ移動します。その後、
 
-    $ java -jar unmo-0.1.0-standalone.jar
-    
+    $ java -jar unmo-0.1.2-standalone.jar
+
 と打ち込んで Enter キーを叩けば起動します。
 
 ひとしきり会話を楽しんだら、話しかけずに Enter キーを押せば終了します。
@@ -48,7 +40,7 @@ Unix 系なら端末エミュレータ、Mac OS ならターミナル、Windows 
 
 ## License
 
-Copyright © 2018-2019 sandmark
+Copyright © 2018-2020 sandmark
 
 Distributed under the Eclipse Public License either version 1.0 or
 any later version.

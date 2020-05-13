@@ -1,166 +1,108 @@
 (ns unmo.responder-test
-  (:require [clojure.test :refer :all]
-            [unmo.responder :refer :all]
-            [unmo.morph :refer [analyze]]))
+  (:require [unmo.responder :as sut]
+            [clojure.test :as t]
+            [clojure.string :as str]))
 
-(deftest markov-responder-test
-  (testing "MarkovResponderは"
-    (let [study-markov #'unmo.dictionary/study-markov]
-      (testing "形態素解析結果partsを受け取り"
-        (let [dictionary (study-markov {} (analyze "あたしはプログラムの女の子です"))
-              parts (analyze "あたしが好きなのはおしゃべりと月餅です")
-              params {:responder :markov :parts parts :dictionary dictionary}
-              result (response params)
-              res (get result :response)]
-          (testing "単語数30個までの文章を生成する"
-            (is (>= 30 (-> res (analyze) (count)))))
+(def analysis
+  {"晴れた天気だ"     [["晴れ" false] ["た" false] ["天気" true] ["だ" false]]
+   "今日は天気がいい" [["今日" true] ["は" false] ["天気" true] ["が" false] ["いい" false]]
+   "今日の天気は快晴" [["今日" true] ["の" false] ["天気" true] ["は" false] ["快晴" true]]
 
-          (testing "文頭の単語が辞書にある場合"
-            (testing "その単語から始まる文章を返す"
-              (is (clojure.string/starts-with? res "あたし"))))
+   "あたしはプログラムの女の子です"
+   [["あたし" false] ["は" false] ["プログラム" true] ["の" false] ["女の子" true] ["です" false]]
 
-          (testing "文頭の単語が辞書にない場合"
-            (let [parts (analyze "まったく関係のない文章")
-                  params {:responder :markov :parts parts :dictionary dictionary}
-                  result (response params)
-                  res (get result :response)]
-              (testing "文頭になりうるランダムな単語から文章を生成する"
-                (is (clojure.string/starts-with? res "あたし"))))))))
+   "あたしが好きなのはおしゃべりと月餅です"
+   [["あたし" false] ["が" false] ["好き" false] ["な" false] ["の" false] ["は" false]
+    ["おしゃべり" true] ["と" false] ["月餅" true] ["です" false]]})
 
-    (testing "辞書が空の場合"
-      (let [dictionary {}
-            parts (analyze "テスト")
-            params {:responder :markov :parts parts}
-            result (response params)]
-        (testing ":errorを設定して返す"
-          (is (contains? result :error)))
+(def markov-dictionary
+  {:markov {:starts     {"あたし" 2}
+            :dictionary {"あたし"     {"は" #{"プログラム"}, "が" #{"好き"}},
+                         "は"         {"プログラム" #{"の"}, "おしゃべり" #{"と"}},
+                         "女の子"     {"です" #{"%ENDMARK%"}},
+                         "おしゃべり" {"と" #{"月餅"}},
+                         "な"         {"の" #{"は"}},
+                         "月餅"       {"です" #{"%ENDMARK%"}},
+                         "と"         {"月餅" #{"です"}},
+                         "プログラム" {"の" #{"女の子"}},
+                         "好き"       {"な" #{"の"}},
+                         "が"         {"好き" #{"な"}},
+                         "の"         {"女の子" #{"です"}, "は" #{"おしゃべり"}}}}})
 
-        (testing ":error :typeに:dictionary-emptyを設定する"
-          (is (= :dictionary-empty (get-in result [:error :type]))))
+(t/deftest response-what-test
+  (t/testing "Fixed response"
+    (t/is (= "test？"
+             (sut/response-what {:input "test"})))))
 
-        (testing ":error :messageに詳細メッセージを設定する"
-          (is (clojure.string/includes? (get-in result [:error :message])
-                                        "辞書が空")))))))
+(t/deftest response-random-test
+  (t/testing "Nil when empty"
+    (t/is (nil? (sut/response-random {})))
+    (t/is (nil? (sut/response-random {:dictionary {:random #{}}}))))
 
-(deftest template-responder-test
-  (testing "TemplateResponderは"
-    (let [dictionary {:template {1 ["あたしは%noun%です" "あなたは%noun%です"]
-                                 2 ["%noun%の%noun%は？"]}}]
-      (testing "発言の名詞の数に一致するテンプレートがある場合"
-        (let [parts (analyze "晴れた天気だ")
-              param {:responder :template :parts parts :dictionary dictionary}]
-          (testing "テンプレートのいずれかをランダムで選択し、%noun%を発言の名詞に置き換える"
-            (let [result (:response (response param))]
-              (is (or (= "あたしは天気です" result)
-                      (= "あなたは天気です" result)))))
+  (t/testing "Any"
+    (t/is (= "Hello"
+             (sut/response-random {:dictionary {:random #{"Hello"}}})))))
 
-          (testing "テンプレートの複数の%noun%を発言の名詞にランダムで置き換える"
-            (let [parts (analyze "今日は天気がいいな")
-                  param (assoc param :parts parts)
-                  result (:response (response param))]
-              (is (or (= "天気の今日は？" result)
-                      (= "今日の天気は？" result)))))))
+(t/deftest response-pattern-test
+  (let [dictionary {:pattern {"チョコ(レート)?" #{"%match%おいしいよね"}
+                              "天気"            #{"明日晴れるといいなー" "今日もいい天気"}}}]
+    (t/testing "Regex replacement"
+      (t/is (= "チョコおいしいよね"
+               (sut/response-pattern {:input      "チョコ食べたい"
+                                      :dictionary dictionary})))
+      (t/is (= "チョコレートおいしいよね"
+               (sut/response-pattern {:input      "チョコレート食べたい"
+                                      :dictionary dictionary}))))
 
-      (testing "発言の名詞の数に一致するテンプレートが無い場合"
-        (let [parts (analyze "あたしはプログラムの女の子で、好きな食べ物は月餅です")
-              param {:responder :template :parts parts :dictionary dictionary}]
-          (testing ":errorを設定して返す"
-            (is (contains? (response param) :error)))
+    (t/testing "Choose randomly when matched"
+      (t/is (some #{(sut/response-pattern {:input "今日は天気が悪い" :dictionary dictionary})}
+                  #{"明日晴れるといいなー" "今日もいい天気"})))
 
-          (testing ":error :messageに詳細メッセージを設定する"
-            (is (clojure.string/includes? (get-in (response param) [:error :message])
-                                          "テンプレートがありません")))
+    (t/testing "Nil when not matched"
+      (t/is (nil? (sut/response-pattern {:input "パターン一致なし" :dictionary dictionary}))))
 
-          (testing ":error :typeに:no-matchを設定する"
-            (is (= :no-match (get-in (response param) [:error :type]))))))
+    (t/testing "Nil when empty"
+      (t/is (nil? (sut/response-pattern {:input "パターン一致なし" :dictionary nil}))))))
 
-      (testing "入力に名詞が見つからなかった場合"
-        (let [parts (analyze "こんにちは")
-              param {:responder :template :parts parts :dictionary dictionary}
-              res   (response param)]
-          (testing ":errorを設定して返す"
-            (is (contains? res :error)))
+(t/deftest response-template-test
+  (let [dictionary {:template {1 #{"あたしは%noun%です" "あなたは%noun%です"}
+                               2 #{"%noun%の%noun%は？"}}}]
+    (t/testing "Replace %noun% with the given noun"
+      (t/is (some #{(sut/response-template {:parts      (analysis "晴れた天気だ")
+                                             :dictionary dictionary})}
+                  #{"あたしは天気です" "あなたは天気です"}))
+      (t/is (some #{(sut/response-template {:parts      (analysis "今日は天気がいい")
+                                             :dictionary dictionary})}
+                  #{"天気の今日は？" "今日の天気は？"})))
 
-          (testing ":error :messageに詳細メッセージを設定する"
-            (is (clojure.string/includes? (get-in res [:error :message])
-                                          "テンプレートがありません")))
+    (t/testing "Nil when not matched"
+      (t/is (nil? (sut/response-template {:parts      (analysis "今日の天気は快晴")
+                                          :dictionary dictionary}))))
 
-          (testing ":error :typeに:no-matchを設定する"
-            (is (= :no-match (get-in res [:error :type])))))))))
+    (t/testing "Nil when empty"
+      (t/is (nil? (sut/response-template {:parts [] :dictionary {}}))))))
 
-(deftest pattern-responder-test
-  (testing "PatternResponderは"
-    (testing "マッチするパターンを見つけ、"
-      (let [dictionary {:pattern {"チョコ(レート)?" ["%match%おいしいよね！"]
-                                  "天気"          ["明日晴れるといいなー"]}}
-            base-param {:responder :pattern :dictionary dictionary}]
-        (testing "候補の中からランダムなものを返す"
-          (let [param (assoc base-param :input "今日は天気がいい")
-                res   (response param)
-                text  (:response res)]
-            (is (= "明日晴れるといいなー" text))))
+(t/deftest response-markov-test
+  (t/testing "When starts with a word in the dictionary"
+    (let [response (sut/response-markov {:parts      (analysis "あたしはプログラムの女の子です")
+                                         :dictionary markov-dictionary})]
+      (t/is (str/starts-with? response "あたし"))
+      (t/is (str/ends-with? response "です"))))
 
-        (testing "%match%を正規表現でマッチしたパターンに置き換えて返す"
-          (is (= "チョコおいしいよね！"
-                 (-> base-param (assoc :input "チョコ食べたい") (response) (:response))))
-          (is (= "チョコレートおいしいよね！"
-                 (-> base-param (assoc :input "チョコレート食べたい") (response) (:response)))))))
+  (t/testing "When starts with a word not in the dictionary"
+    (let [response (sut/response-markov {:parts      (analysis "今日は天気がいい")
+                                         :dictionary markov-dictionary})]
+      (t/is (str/starts-with? response "あたし"))
+      (t/is (str/ends-with? response "です"))))
 
-    (testing "マッチするパターンがなかった場合"
-      (let [param {:input "nothing" :dictionary {} :responder :pattern}]
-        (testing ":errorを設定して返す"
-          (is (contains? (response param) :error)))
+  (t/testing "Basic markov patterns"
+    (let [response (sut/response-markov {:parts      (analysis "あたしはプログラムの女の子です")
+                                         :dictionary markov-dictionary})]
+      (t/is (some #{response}
+                  #{"あたしはプログラムの女の子です"
+                     "あたしが好きなの女の子です"
+                     "あたしが好きなのはおしゃべりと月餅です"}))))
 
-        (testing ":error :messageに詳細メッセージを設定する"
-          (is (clojure.string/includes? "パターンがありません"
-                                        (get-in (response param) [:error :message]))))
-
-        (testing ":error :typeに:no-matchを設定する"
-          (is (= :no-match (get-in (response param) [:error :type]))))))))
-
-(deftest random-responder-test
-  (testing "RandomResponderは"
-    (testing "ランダム辞書から無作為な値を返す"
-      (let [dic {:random ["a" "b" "c"]}
-            param {:responder :random :dictionary dic}
-            res (response param)]
-        (is (some #{(:response res)} (:random dic)))))
-
-    (testing "ランダム辞書が空だった場合"
-      (testing ":error :messageを設定して返す"
-        (let [dictionary {:random []}
-              param {:responder :random :dictionary dictionary}
-              res (response param)]
-          (is (contains? res :error))
-          (is (clojure.string/includes? (get-in res [:error :message]) "ランダム辞書が空です"))))
-
-      (testing ":error :typeに:fatalを設定する"
-        (let [dictionary {:random []}
-              param {:responder :random :dictionary dictionary}
-              res (response param)]
-          (is (= :fatal (get-in res [:error :type]))))))))
-
-(deftest what-responder-test
-  (testing "WhatResponderは"
-    (testing "発言を表現するMapオブジェクトを返す"
-      (let [res (response {:responder :what :input "test"})]
-        (are [k] (contains? res k)
-          :responder
-          :input
-          :response)))
-
-    (testing "入力 s に対し、常に \"sってなに？\" と返す"
-      (let [result {:responder :what :input "テスト" :response "テストってなに？"}]
-        (is (= result
-               (response {:responder :what :input "テスト"})))))))
-
-(deftest default-responder-test
-  (testing "Responderを指定しなかった場合、"
-    (testing "例外IllegalArgumentExceptionを投げる"
-      (is (thrown-with-msg? IllegalArgumentException #"存在しません"
-                            (response {})))))
-
-  (testing "存在しないResponderを指定した場合、"
-    (testing "例外IllegalArgumentExceptionを投げる"
-      (is (thrown-with-msg? IllegalArgumentException #"存在しません"
-                            (response {:responder :not-found}))))))
+  (t/testing "Nil when the dictionary is empty"
+    (t/is (nil? (sut/response-markov {:parts      (analysis "あたしはプログラムの女の子です")
+                                      :dictionary {}})))))

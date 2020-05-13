@@ -1,33 +1,75 @@
 (ns unmo.morph
-  (:import [com.worksap.nlp.sudachi DictionaryFactory Tokenizer$SplitMode]))
+  (:require [clojure.spec.alpha :as s]
+            [integrant.core :as ig])
+  (:import com.atilika.kuromoji.ipadic.Tokenizer))
 
-(def ^:private tokenizer
-  "Sudachiの形態素解析インスタンス"
-  (try
-    (let [settings (slurp "sudachi_fulldict.json" :encoding "UTF-8")]
-      (-> (DictionaryFactory.) (.create settings) (.create)))
-    (catch java.io.FileNotFoundException e
-      (println (.getMessage e))
-      (println "形態素解析ライブラリSudachiの設定ファイルと辞書を用意してください。")
-      (System/exit 1))))
+(s/def ::instance (s/nilable (partial instance? Tokenizer)))
+(s/def ::tokenizer fn?)
 
-(def ^:private split-mode
-  "Sudachiの形態素解析オプション"
-  {:a Tokenizer$SplitMode/A :b Tokenizer$SplitMode/B :c Tokenizer$SplitMode/C})
+(defmethod ig/pre-init-spec :morph/instance [_]
+  (s/spec ::instance))
 
-(defn analyze
-  "与えられた文字列に対して形態素解析を行い、[形態素 表層系]のリストを返す"
-  ([text] (analyze text :c))
-  ([text mode]
-   (letfn [(->parts [token]
-             (let [parts   (->> (.partOfSpeech token) (clojure.string/join \,))
-                   surface (.surface token)]
-               [surface parts]))]
-     (->> (.tokenize tokenizer (mode split-mode) text)
-          (map ->parts)
-          (filter (comp (complement empty?) first))))))
+(defmethod ig/pre-init-spec :morph/tokenizer [_]
+  (s/keys :req-un [::instance]))
+
+(s/def ::part (s/tuple string? boolean?))
+(s/def ::parts (s/coll-of ::part))
+(s/def ::surface string?)
+(s/def ::part-lv1 string?)
+(s/def ::part-lv2 string?)
 
 (defn noun?
-  "与えられた形態素が名詞かどうかを判定する"
-  [[word part]]
-  (-> #"名詞,(一般|普通名詞|固有名詞|サ変接続|形容動詞語幹)" (re-find part) (boolean)))
+  [[_ noun :as part]]
+  {:pre  [(s/valid? ::part part)]
+   :post [(s/valid? boolean? %)]}
+  noun)
+
+(defn- ->surf-noun
+  [[surf lv1 lv2 :as tuple]]
+  {:pre  [(s/valid? (s/tuple ::surface ::part-lv1 ::part-lv2) tuple)]
+   :post [(s/valid? ::part %)]}
+  (let [noun? (boolean (and (some #{lv1} #{"名詞"})
+                            (some #{lv2} #{"一般" "固有名詞" "サ変接続" "副詞可能" "形容動詞語幹"})))]
+    [surf noun?]))
+
+(def ^:private system (atom nil))
+
+(def ^:private config
+  {:morph/instance  nil
+   :morph/tokenizer {:instance (ig/ref :morph/instance)}})
+
+(defmethod ig/init-key :morph/instance [_ _]
+  (Tokenizer.))
+
+(defmethod ig/init-key :morph/tokenizer
+  [_ {:keys [instance]}]
+  (fn [s]
+    {:pre  [(s/valid? string? s)]
+     :post [(s/valid? ::parts %)]}
+    (->> (.tokenize instance s)
+         (map #(vector (.getSurface %)
+                       (.getPartOfSpeechLevel1 %)
+                       (.getPartOfSpeechLevel2 %)))
+         (mapv ->surf-noun))))
+
+(defn start []
+  (reset! system (-> config ig/init))
+  :started)
+
+(defn stop []
+  (when @system
+    (ig/halt! @system))
+  (reset! system nil)
+  :stopped)
+
+(defn restart []
+  (stop)
+  (start)
+  :restarted)
+
+(defn analyze
+  [s]
+  {:pre  [(s/valid? string? s)]
+   :post [(s/valid? (s/nilable ::parts) %)]}
+  (when-let [f (:morph/tokenizer @system)]
+    (f s)))
